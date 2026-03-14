@@ -1,20 +1,23 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { getPortfolioStats } from '@onereal/database';
+import { getProfile, getPortfolioStats } from '@onereal/database';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@onereal/database';
 import { StatCard, Button } from '@onereal/ui';
 import { Building2, DoorOpen, Percent, DollarSign, Plus } from 'lucide-react';
 import Link from 'next/link';
 
+type ProfileRow = Database['public']['Tables']['profiles']['Row'];
+
 export default async function DashboardPage() {
-  const supabase = await createServerSupabaseClient();
+  const supabaseRaw = await createServerSupabaseClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = supabaseRaw as unknown as SupabaseClient<Database>;
+
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return null;
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('default_org_id')
-    .eq('id', user.id)
-    .single();
+  const profile = await getProfile(supabase, user.id).catch(() => null) as ProfileRow | null;
 
   if (!profile?.default_org_id) return null;
 

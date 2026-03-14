@@ -1,7 +1,9 @@
 'use client';
 
 import { useUser } from '@onereal/auth';
-import { createClient } from '@/lib/supabase/client';
+import { createClient, updateProfile } from '@onereal/database';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@onereal/database';
 import { useRouter } from 'next/navigation';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -13,7 +15,8 @@ import { Building2, ChevronDown, Check } from 'lucide-react';
 export function OrgSwitcher() {
   const { activeOrg, organizations, loading } = useUser();
   const router = useRouter();
-  const supabase = createClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = createClient() as unknown as SupabaseClient<Database>;
 
   if (loading || !activeOrg) return null;
 
@@ -21,7 +24,7 @@ export function OrgSwitcher() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    await supabase.from('profiles').update({ default_org_id: orgId }).eq('id', user.id);
+    await updateProfile(supabase, user.id, { default_org_id: orgId });
     router.refresh();
   }
 
