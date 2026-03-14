@@ -1,0 +1,5 @@
+-- Seed data is applied after migrations.
+-- For development, register a user through the app UI.
+-- The on_auth_user_created trigger auto-creates profile + personal org.
+-- Then create properties via the app.
+-- This file is intentionally minimal — seed via UI for realistic testing.
