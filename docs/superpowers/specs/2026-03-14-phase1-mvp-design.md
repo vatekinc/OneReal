@@ -33,7 +33,7 @@ Both equally from day one:
 OneReal/
 ├── apps/web/                    # Next.js 15 Application
 │   ├── app/
-│   │   ├── (auth)/              # Public auth pages (login, register, forgot-password, reset-password)
+│   │   ├── (auth)/              # Public auth pages (login, register, forgot-password, reset-password, onboarding)
 │   │   ├── (dashboard)/         # Protected dashboard pages
 │   │   │   ├── page.tsx         # Dashboard home
 │   │   │   ├── properties/     # Property list, new, [id] detail, [id]/edit
@@ -181,7 +181,65 @@ Constraint: `UNIQUE(property_id, unit_number)`
 
 ### Migration 003: Placeholder Tables
 
-Tables for `leases`, `transactions`, `maintenance_requests` — created with full schema (as defined in ARCHITECTURE.md) so foreign keys are valid, but no UI until later phases.
+Tables created with full schema so foreign keys are valid. No UI until later phases.
+
+**`leases`**
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID PK | |
+| org_id | UUID FK → organizations | |
+| unit_id | UUID FK → units | |
+| tenant_id | UUID FK → profiles | |
+| start_date | DATE | |
+| end_date | DATE | null = month-to-month |
+| rent_amount | DECIMAL(10,2) | |
+| deposit_amount | DECIMAL(10,2) | |
+| payment_due_day | INTEGER | 1-28 |
+| status | TEXT | draft, active, expired, terminated |
+| terms | JSONB | default '{}' |
+| created_at | TIMESTAMPTZ | |
+| updated_at | TIMESTAMPTZ | |
+
+**`transactions`**
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID PK | |
+| org_id | UUID FK → organizations | |
+| lease_id | UUID FK → leases, nullable | |
+| unit_id | UUID FK → units | |
+| tenant_id | UUID FK → profiles, nullable | |
+| type | TEXT | rent, deposit, fee, invoice, refund, expense, other |
+| amount | DECIMAL(10,2) | |
+| payment_method | TEXT | stripe, cash, check, zelle, bank_transfer, other |
+| payment_status | TEXT | pending, completed, failed, refunded |
+| stripe_payment_id | TEXT | |
+| due_date | DATE | |
+| paid_date | DATE | |
+| description | TEXT | |
+| notes | TEXT | |
+| created_at | TIMESTAMPTZ | |
+| updated_at | TIMESTAMPTZ | |
+
+**`maintenance_requests`**
+| Column | Type | Notes |
+|--------|------|-------|
+| id | UUID PK | |
+| org_id | UUID FK → organizations | |
+| unit_id | UUID FK → units | |
+| reported_by | UUID FK → profiles | |
+| assigned_to | UUID FK → profiles, nullable | |
+| title | TEXT NOT NULL | |
+| description | TEXT | |
+| priority | TEXT | low, medium, high, emergency |
+| status | TEXT | open, in_progress, waiting_parts, completed, closed |
+| category | TEXT | plumbing, electrical, hvac, appliance, structural, pest, other |
+| images | JSONB | default '[]' |
+| estimated_cost | DECIMAL(10,2) | |
+| actual_cost | DECIMAL(10,2) | |
+| scheduled_date | DATE | |
+| completed_date | DATE | |
+| created_at | TIMESTAMPTZ | |
+| updated_at | TIMESTAMPTZ | |
 
 ### Triggers
 
@@ -191,13 +249,23 @@ Tables for `leases`, `transactions`, `maintenance_requests` — created with ful
 
 ### RLS Policies
 
-Every table with `org_id`:
+**Tables with direct `org_id`** (organizations, org_members, properties, leases, transactions, maintenance_requests):
 - **SELECT**: `org_id IN (SELECT org_id FROM org_members WHERE user_id = auth.uid() AND status = 'active')`
 - **INSERT**: Same as SELECT + role check (`role IN ('admin', 'landlord', 'property_manager')`)
 - **UPDATE**: Same as INSERT
 - **DELETE**: Same as INSERT
 
-Tables without `org_id` (profiles): user can only read/update their own row.
+**Tables without `org_id` (joined through parent):**
+
+`units` — RLS via join to `properties`:
+- **SELECT**: `property_id IN (SELECT id FROM properties WHERE org_id IN (SELECT org_id FROM org_members WHERE user_id = auth.uid() AND status = 'active'))`
+- **INSERT/UPDATE/DELETE**: Same + role check
+
+`property_images` — RLS via join to `properties`:
+- **SELECT**: `property_id IN (SELECT id FROM properties WHERE org_id IN (SELECT org_id FROM org_members WHERE user_id = auth.uid() AND status = 'active'))`
+- **INSERT/UPDATE/DELETE**: Same + role check
+
+**`profiles`**: user can only SELECT/UPDATE their own row (`id = auth.uid()`).
 
 ### Supabase Storage
 
@@ -219,7 +287,7 @@ Register (email/pwd or Google OAuth)
   → Step 2: Org choice:
       a) Keep personal org (individual landlord) → done
       b) Create company org (name, slug) → new org created, user added as admin
-      c) Join existing org (invite code) → added with invited status
+      c) Join existing org (deferred — option hidden in Phase 1, requires invite system)
   → Redirect to dashboard
 ```
 
@@ -236,9 +304,11 @@ Register (email/pwd or Google OAuth)
 ### Middleware
 
 - Unauthenticated → redirect to `/login`
-- Authenticated without completed profile → redirect to `/onboarding`
+- Authenticated without completed onboarding → redirect to `/onboarding`. Completion check: `profiles.first_name IS NOT NULL AND profiles.default_org_id IS NOT NULL`. The `on_profile_created` trigger sets `default_org_id` to the auto-created personal org, but `first_name` is null until onboarding step 1 is completed.
 - Authenticated on auth pages → redirect to dashboard
 - No role-based route blocking in Phase 1
+
+**Google OAuth note:** The `on_auth_user_created` trigger fires for both email/password and OAuth registrations. For Google OAuth, the trigger creates the profile with `email` populated from Google but `first_name` null, so the user still goes through onboarding to complete their profile and choose an org.
 
 ### Auth Package (`@onereal/auth`)
 
@@ -284,6 +354,7 @@ Register (email/pwd or Google OAuth)
 **Topbar:**
 - Left: Breadcrumbs (auto-generated from route)
 - Right: Org switcher dropdown, user avatar dropdown (profile, settings, sign out)
+- No notification bell in Phase 1 (deferred to Phase 2 when there are events to notify about)
 
 **Dashboard Home:**
 - 4 stat cards: Total Properties, Total Units, Occupancy %, Total Rent Potential
@@ -312,7 +383,7 @@ Register (email/pwd or Google OAuth)
 
 ### Create Property (`/properties/new`)
 
-Single-page form with sections (not a wizard):
+Single-page form with sections (not a multi-step wizard — this differs from ARCHITECTURE.md Step 5b which described a 5-step wizard. Units and images are managed from the property detail page instead, per the two-phase approach decision):
 - **Basic Info**: Name, Type (dropdown), Status
 - **Address**: Line 1, Line 2, City, State, ZIP, Country
 - **Details**: Year built, purchase price, purchase date, market value, notes, metadata (type-specific fields shown conditionally)
@@ -341,11 +412,11 @@ Same form as create, pre-populated with existing data.
 
 - `createProperty(data)` — Zod validation, insert, auto-create "Main" unit for SFH/townhouse/condo
 - `updateProperty(id, data)` — validate, update
-- `deleteProperty(id)` — cascade delete units, remove images from storage, delete DB records
+- `deleteProperty(id)` — application-level cascade: delete images from Supabase Storage, then delete DB records (units, images, property) using DB CASCADE constraints
 - `createUnit(propertyId, data)` — validate, insert
 - `updateUnit(id, data)` — validate, update
 - `deleteUnit(id)` — prevent deleting last unit, delete
-- `uploadImage(propertyId, file)` — upload to Supabase Storage, create DB record
+- `uploadImage(propertyId, file)` — upload to Supabase Storage, create DB record. Constraints: max 5MB per file, accepted formats: JPEG, PNG, WebP. Max 20 images per property.
 - `deleteImage(id)` — delete from storage + DB
 - `setPrimaryImage(id)` — unset current primary, set new
 
@@ -387,7 +458,8 @@ Computed from data, not stored:
 **Organization Settings (`/settings`):**
 - Edit org name, upload logo
 - View org slug
-- For company orgs: members list with roles, invite by email
+- Slug auto-generated from org name on creation (kebab-case, e.g., "My Properties LLC" → "my-properties-llc"). Collisions handled by appending a random 4-char suffix.
+- For company orgs: members list with roles (read-only in Phase 1). Full invite-by-email flow deferred to Phase 2 — requires email templates, invite acceptance flow, and handling of existing vs. new users.
 
 **Profile Settings (`/settings/profile`):**
 - Edit first name, last name, phone, avatar upload
@@ -436,7 +508,20 @@ Pages: `/transactions`, `/tenants`, `/maintenance`
 
 ---
 
-## 11. Out of Scope (Phase 1)
+## 11. Error Handling Pattern
+
+All server actions return a consistent result type:
+- **Success**: `{ success: true, data: T }`
+- **Error**: `{ success: false, error: string }`
+
+UI feedback via `toast.tsx` from `@onereal/ui`:
+- Success actions (create, update, delete) show a success toast
+- Validation errors show inline form errors (React Hook Form)
+- Server errors show an error toast with a generic message
+
+---
+
+## 12. Out of Scope (Phase 1)
 
 - Dark/light theme toggle
 - Stripe payments
@@ -447,3 +532,7 @@ Pages: `/transactions`, `/tenants`, `/maintenance`
 - Email notifications
 - Automated testing (Vitest, Playwright)
 - CI/CD pipeline
+- Notification bell in topbar
+- "Join existing org" onboarding option (requires invite system)
+- Invite members by email (requires email templates + acceptance flow)
+- Zustand stores (not needed in Phase 1 — TanStack Query handles server state, React state handles simple UI state like view toggles)
