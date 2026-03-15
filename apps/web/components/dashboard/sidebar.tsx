@@ -7,7 +7,9 @@ import { cn, Button, Sheet, SheetContent, SheetTrigger, Tooltip, TooltipContent,
 import {
   LayoutDashboard, Building2, Calculator, Users, Wrench,
   Settings, ChevronLeft, ChevronRight, ChevronDown, Menu,
+  Home, FileText, CreditCard,
 } from 'lucide-react';
+import { useRole } from '@onereal/auth';
 
 interface NavChild {
   label: string;
@@ -42,6 +44,13 @@ const navItems: NavItem[] = [
     ],
   },
   { label: 'Maintenance', href: '/maintenance', icon: Wrench, disabled: true, badge: 'Soon' },
+];
+
+const tenantNavItems: NavItem[] = [
+  { label: 'Home', href: '/tenant', icon: Home },
+  { label: 'My Lease', href: '/tenant/lease', icon: FileText },
+  { label: 'Payments', href: '/tenant/payments', icon: CreditCard },
+  // Maintenance coming soon — omitted until feature is available
 ];
 
 const bottomItems: NavItem[] = [
@@ -162,6 +171,8 @@ function SidebarContent({
   onToggle?: () => void;
 }) {
   const pathname = usePathname();
+  const role = useRole();
+  const items = role === 'tenant' ? tenantNavItems : navItems;
 
   return (
     <div className="flex h-full flex-col gap-2 p-3">
@@ -182,7 +193,7 @@ function SidebarContent({
 
       <nav className="flex flex-1 flex-col gap-1">
         <TooltipProvider delayDuration={0}>
-          {navItems.map((item) => (
+          {items.map((item) => (
             <NavLink key={item.href} item={item} collapsed={collapsed} pathname={pathname} />
           ))}
         </TooltipProvider>
