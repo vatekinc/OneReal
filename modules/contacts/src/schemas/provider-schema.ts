@@ -8,7 +8,7 @@ export const providerSchema = z.object({
   category: z.enum([
     'plumber', 'electrician', 'hvac', 'general_contractor', 'cleaner',
     'landscaper', 'painter', 'roofer', 'pest_control', 'locksmith',
-    'appliance_repair', 'other',
+    'appliance_repair', 'mortgage_provider', 'other',
   ]),
   notes: z.string().optional().default(''),
 });

@@ -29,6 +29,7 @@ const providerCategoryLabels: Record<string, string> = {
   pest_control: 'Pest Control',
   locksmith: 'Locksmith',
   appliance_repair: 'Appliance Repair',
+  mortgage_provider: 'Mortgage Provider',
   other: 'Other',
 };
 
