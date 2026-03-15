@@ -3,14 +3,17 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, Badge, StatCard, Button,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@onereal/ui';
-import { DoorOpen, Percent, DollarSign, MapPin, BedDouble, Bath, Ruler, Pencil, Plus } from 'lucide-react';
+import { DoorOpen, Percent, DollarSign, MapPin, BedDouble, Bath, Ruler, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { Property, Unit, PropertyImage } from '@onereal/types';
 import { UnitTable } from './unit-table';
 import { ImageGallery } from './image-gallery';
 import { UnitDialog } from './unit-dialog';
 import { useUser } from '@onereal/auth';
 import { useLeases } from '@onereal/contacts';
+import { deleteLease } from '@onereal/contacts/actions/delete-lease';
 import { LeaseDialog } from '@/components/contacts/lease-dialog';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import Link from 'next/link';
 
 const SINGLE_UNIT_TYPES = ['single_family', 'townhouse', 'condo'];
@@ -95,17 +98,31 @@ const leaseStatusColors: Record<string, string> = {
 
 function PropertyLeases({ propertyId }: { propertyId: string }) {
   const { activeOrg } = useUser();
+  const queryClient = useQueryClient();
   const { data: leasesData } = useLeases({
     orgId: activeOrg?.id ?? null,
     propertyId,
   });
   const leases = (leasesData ?? []) as any[];
   const [leaseDialogOpen, setLeaseDialogOpen] = useState(false);
+  const [editingLease, setEditingLease] = useState<any>(null);
+
+  async function handleDeleteLease(leaseId: string) {
+    if (!confirm('Are you sure you want to delete this lease?')) return;
+    const result = await deleteLease(leaseId);
+    if (result.success) {
+      toast.success('Lease deleted');
+      queryClient.invalidateQueries({ queryKey: ['leases'] });
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+    } else {
+      toast.error(result.error);
+    }
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button size="sm" className="gap-2" onClick={() => setLeaseDialogOpen(true)}>
+        <Button size="sm" className="gap-2" onClick={() => { setEditingLease(null); setLeaseDialogOpen(true); }}>
           <Plus className="h-4 w-4" /> Add Lease
         </Button>
       </div>
@@ -126,6 +143,7 @@ function PropertyLeases({ propertyId }: { propertyId: string }) {
                 <TableHead>End Date</TableHead>
                 <TableHead className="text-right">Rent</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -149,6 +167,16 @@ function PropertyLeases({ propertyId }: { propertyId: string }) {
                       {lease.status}
                     </span>
                   </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => { setEditingLease(lease); setLeaseDialogOpen(true); }}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteLease(lease.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -158,7 +186,7 @@ function PropertyLeases({ propertyId }: { propertyId: string }) {
       <LeaseDialog
         open={leaseDialogOpen}
         onOpenChange={setLeaseDialogOpen}
-        lease={null}
+        lease={editingLease}
         defaultPropertyId={propertyId}
       />
     </div>
