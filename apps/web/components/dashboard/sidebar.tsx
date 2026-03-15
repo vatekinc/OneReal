@@ -5,14 +5,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn, Button, Sheet, SheetContent, SheetTrigger, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@onereal/ui';
 import {
-  LayoutDashboard, Building2, CreditCard, Users, Wrench,
+  LayoutDashboard, Building2, Calculator, Users, Wrench,
   Settings, ChevronLeft, ChevronRight, Menu,
 } from 'lucide-react';
 
 const navItems = [
   { label: 'Dashboard', href: '/', icon: LayoutDashboard, disabled: false },
   { label: 'Properties', href: '/properties', icon: Building2, disabled: false },
-  { label: 'Transactions', href: '/transactions', icon: CreditCard, disabled: true, badge: 'Soon' },
+  { label: 'Accounting', href: '/accounting', icon: Calculator, disabled: false },
   { label: 'Tenants', href: '/tenants', icon: Users, disabled: true, badge: 'Soon' },
   { label: 'Maintenance', href: '/maintenance', icon: Wrench, disabled: true, badge: 'Soon' },
 ];
