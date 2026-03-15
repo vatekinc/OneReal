@@ -68,19 +68,9 @@ export async function getFinancialStats(
   );
   const netIncome = totalIncome - totalExpenses;
 
-  // ROI: net / sum of purchase_prices (non-null) * 100
-  const { data: properties, error: propError } = await client
-    .from('properties')
-    .select('purchase_price')
-    .eq('org_id', orgId);
-  if (propError) throw propError;
-
-  const totalPurchasePrice = (properties ?? []).reduce(
-    (sum, p) => sum + (Number(p.purchase_price) || 0),
-    0,
-  );
-  const roi = totalPurchasePrice > 0
-    ? Math.round((netIncome / totalPurchasePrice) * 100 * 100) / 100
+  // ROI: cash-flow based — net / income * 100
+  const roi = totalIncome > 0
+    ? Math.round((netIncome / totalIncome) * 100 * 100) / 100
     : 0;
 
   // Percentage change vs. previous period
@@ -246,7 +236,7 @@ export async function getPropertyFinancials(
   // Get all properties for the org
   const { data: properties, error: propError } = await client
     .from('properties')
-    .select('id, name, purchase_price')
+    .select('id, name')
     .eq('org_id', orgId);
   if (propError) throw propError;
   if (!properties || properties.length === 0) return [];
@@ -286,9 +276,8 @@ export async function getPropertyFinancials(
     const income = incomeMap.get(prop.id) ?? 0;
     const expenses = expenseMap.get(prop.id) ?? 0;
     const net = income - expenses;
-    const purchasePrice = Number(prop.purchase_price) || 0;
-    const roi = purchasePrice > 0
-      ? Math.round((net / purchasePrice) * 100 * 100) / 100
+    const roi = income > 0
+      ? Math.round((net / income) * 100 * 100) / 100
       : 0;
 
     return {
