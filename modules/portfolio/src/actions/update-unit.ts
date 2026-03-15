@@ -1,6 +1,6 @@
 'use server';
 
-import { createServerSupabaseClient } from '@onereal/database';
+import { createServerSupabaseClient } from '@onereal/database/server';
 import type { ActionResult } from '@onereal/types';
 import { unitSchema, type UnitFormValues } from '../schemas/unit-schema';
 

@@ -1,6 +1,6 @@
 'use server';
 
-import { createServerSupabaseClient } from '@onereal/database';
+import { createServerSupabaseClient } from '@onereal/database/server';
 import type { ActionResult } from '@onereal/types';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB

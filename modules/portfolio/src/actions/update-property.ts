@@ -1,6 +1,6 @@
 'use server';
 
-import { createServerSupabaseClient } from '@onereal/database';
+import { createServerSupabaseClient } from '@onereal/database/server';
 import type { ActionResult } from '@onereal/types';
 import { propertySchema, type PropertyFormValues } from '../schemas/property-schema';
 

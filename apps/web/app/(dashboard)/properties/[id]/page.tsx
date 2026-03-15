@@ -1,4 +1,5 @@
-import { createServerSupabaseClient, getProperty } from '@onereal/database';
+import { createServerSupabaseClient } from '@onereal/database/server';
+import { getProperty } from '@onereal/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@onereal/database';
 import { PropertyDetailTabs } from '@/components/properties/property-detail-tabs';

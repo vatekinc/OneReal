@@ -1,6 +1,6 @@
 'use server';
 
-import { createServerSupabaseClient } from '@onereal/database';
+import { createServerSupabaseClient } from '@onereal/database/server';
 import type { ActionResult } from '@onereal/types';
 
 export async function setPrimaryImage(
