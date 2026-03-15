@@ -183,6 +183,8 @@ export interface Tenant {
   emergency_contact_phone: string | null;
   notes: string | null;
   status: string;
+  user_id: string | null;
+  invited_at: string | null;
   created_at: string;
   updated_at: string;
 }
