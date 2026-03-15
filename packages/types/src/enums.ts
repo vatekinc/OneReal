@@ -121,3 +121,27 @@ export const MaintenanceCategory = {
   OTHER: 'other',
 } as const;
 export type MaintenanceCategory = (typeof MaintenanceCategory)[keyof typeof MaintenanceCategory];
+
+export const IncomeType = {
+  RENT: 'rent',
+  DEPOSIT: 'deposit',
+  LATE_FEE: 'late_fee',
+  OTHER: 'other',
+} as const;
+export type IncomeType = (typeof IncomeType)[keyof typeof IncomeType];
+
+export const ExpenseType = {
+  MORTGAGE: 'mortgage',
+  MAINTENANCE: 'maintenance',
+  REPAIRS: 'repairs',
+  UTILITIES: 'utilities',
+  INSURANCE: 'insurance',
+  TAXES: 'taxes',
+  MANAGEMENT: 'management',
+  ADVERTISING: 'advertising',
+  LEGAL: 'legal',
+  HOA: 'hoa',
+  HOME_WARRANTY: 'home_warranty',
+  OTHER: 'other',
+} as const;
+export type ExpenseType = (typeof ExpenseType)[keyof typeof ExpenseType];

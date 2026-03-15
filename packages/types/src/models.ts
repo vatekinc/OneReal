@@ -103,3 +103,70 @@ export interface PortfolioStats {
   occupancy_rate: number;
   total_rent_potential: number;
 }
+
+export interface Income {
+  id: string;
+  org_id: string;
+  property_id: string;
+  unit_id: string | null;
+  amount: number;
+  income_type: string;
+  description: string;
+  transaction_date: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Expense {
+  id: string;
+  org_id: string;
+  property_id: string;
+  unit_id: string | null;
+  amount: number;
+  expense_type: string;
+  description: string;
+  transaction_date: string;
+  receipt_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FinancialStats {
+  total_income: number;
+  total_expenses: number;
+  net_income: number;
+  roi: number;
+  income_change: number;
+  expense_change: number;
+}
+
+export interface MonthlyTrendPoint {
+  month: string;
+  income: number;
+  expenses: number;
+}
+
+export interface CategoryBreakdown {
+  category: string;
+  amount: number;
+  percentage: number;
+}
+
+export interface PropertyFinancial {
+  property_id: string;
+  property_name: string;
+  income: number;
+  expenses: number;
+  net: number;
+  roi: number;
+}
+
+export interface RecentTransaction {
+  id: string;
+  type: 'income' | 'expense';
+  amount: number;
+  category: string;
+  description: string;
+  property_name: string;
+  transaction_date: string;
+}
