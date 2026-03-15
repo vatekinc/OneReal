@@ -49,7 +49,7 @@ export default async function AccountingPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Financial Overview</h1>
+        <h1 className="text-2xl font-bold">Overview</h1>
         <Suspense>
           <DateRangeFilter />
         </Suspense>

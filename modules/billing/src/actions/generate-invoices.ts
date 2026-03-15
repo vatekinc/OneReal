@@ -6,6 +6,7 @@ import type { ActionResult } from '@onereal/types';
 interface GenerateResult {
   created: number;
   skipped: number;
+  skipReasons?: string[];
 }
 
 export async function generateInvoices(
@@ -57,10 +58,12 @@ export async function generateInvoices(
 
     let created = 0;
     let skipped = 0;
+    const skipReasons: string[] = [];
 
     for (const lease of leases) {
       if (existingLeaseIds.has(lease.id)) {
         skipped++;
+        skipReasons.push(`Lease ${lease.id}: invoice already exists for this month`);
         continue;
       }
 
@@ -72,6 +75,7 @@ export async function generateInvoices(
 
       if (!propertyId || !lease.rent_amount) {
         skipped++;
+        skipReasons.push(`Lease ${lease.id}: missing ${!propertyId ? 'property' : 'rent amount'}`);
         continue;
       }
 
@@ -81,6 +85,7 @@ export async function generateInvoices(
       });
       if (seqError) {
         skipped++;
+        skipReasons.push(`Lease ${lease.id}: invoice number error - ${seqError.message}`);
         continue;
       }
 
@@ -95,17 +100,19 @@ export async function generateInvoices(
         unit_id: lease.unit_id,
         amount: lease.rent_amount,
         due_date: dueDate,
+        issued_date: new Date().toISOString().split('T')[0],
         description: `Rent - ${monthName} ${year}`,
       });
 
       if (insertError) {
         skipped++;
+        skipReasons.push(`Lease ${lease.id}: insert failed - ${insertError.message}`);
       } else {
         created++;
       }
     }
 
-    return { success: true, data: { created, skipped } };
+    return { success: true, data: { created, skipped, skipReasons } };
   } catch {
     return { success: false, error: 'Failed to generate invoices' };
   }

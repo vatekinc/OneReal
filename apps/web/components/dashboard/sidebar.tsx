@@ -29,7 +29,7 @@ const navItems: NavItem[] = [
   {
     label: 'Accounting', href: '/accounting', icon: Calculator,
     children: [
-      { label: 'Financial Overview', href: '/accounting' },
+      { label: 'Overview', href: '/accounting' },
       { label: 'Incoming', href: '/accounting/incoming' },
       { label: 'Outgoing', href: '/accounting/outgoing' },
     ],

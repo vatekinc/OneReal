@@ -43,7 +43,12 @@ export function GenerateInvoicesDialog({ open, onOpenChange }: GenerateInvoicesD
     setIsGenerating(false);
 
     if (result.success) {
-      toast.success(`Created ${result.data.created} invoice(s)${result.data.skipped > 0 ? `, ${result.data.skipped} skipped` : ''}`);
+      if (result.data.created > 0) {
+        toast.success(`Created ${result.data.created} invoice(s)${result.data.skipped > 0 ? `, ${result.data.skipped} skipped` : ''}`);
+      } else if (result.data.skipped > 0) {
+        const reason = result.data.skipReasons?.[0] ?? 'Unknown reason';
+        toast.error(`Skipped ${result.data.skipped} invoice(s): ${reason}`);
+      }
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['invoice-generation-preview'] });
       onOpenChange(false);
