@@ -4,7 +4,8 @@
   "private": true,
   "exports": {
     ".": "./src/index.ts",
-    "./server": "./src/server.ts"
+    "./server": "./src/server.ts",
+    "./service-role": "./src/service-role.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit"
