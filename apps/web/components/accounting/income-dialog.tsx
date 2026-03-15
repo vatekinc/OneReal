@@ -180,7 +180,7 @@ export function IncomeDialog({ open, onOpenChange, income }: IncomeDialogProps) 
             </div>
             <FormField control={form.control} name="description" render={({ field }) => (
               <FormItem>
-                <FormLabel>Description *</FormLabel>
+                <FormLabel>Description</FormLabel>
                 <FormControl>
                   <Textarea {...field} placeholder="Enter description" />
                 </FormControl>

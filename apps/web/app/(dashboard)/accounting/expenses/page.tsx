@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useUser } from '@onereal/auth';
 import { useExpenses } from '@onereal/accounting';
 import { useProperties } from '@onereal/portfolio';
 import { deleteExpense } from '@onereal/accounting/actions/delete-expense';
 import { ExpenseDialog } from '@/components/accounting/expense-dialog';
+import { DateRangeFilterClient, type DateRangeValue } from '@/components/accounting/date-range-filter-client';
 import {
   Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Badge,
@@ -37,8 +38,13 @@ export default function ExpensesPage() {
   const [search, setSearch] = useState('');
   const [propertyFilter, setPropertyFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('');
+  const [dateRange, setDateRange] = useState<DateRangeValue>({});
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+
+  const handleDateRangeChange = useCallback((value: DateRangeValue) => {
+    setDateRange(value);
+  }, []);
 
   const { data: propertiesData } = useProperties({ orgId: activeOrg?.id ?? null });
   const properties = (propertiesData?.data ?? []) as any[];
@@ -48,6 +54,8 @@ export default function ExpensesPage() {
     propertyId: propertyFilter || undefined,
     expenseType: typeFilter || undefined,
     search: search || undefined,
+    from: dateRange.from,
+    to: dateRange.to,
   });
 
   const expenses = (expenseData ?? []) as Expense[];
@@ -108,6 +116,8 @@ export default function ExpensesPage() {
           </SelectContent>
         </Select>
       </div>
+
+      <DateRangeFilterClient onChange={handleDateRangeChange} />
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading...</p>

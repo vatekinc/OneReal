@@ -8,7 +8,7 @@ export const expenseSchema = z.object({
     'mortgage', 'maintenance', 'repairs', 'utilities', 'insurance',
     'taxes', 'management', 'advertising', 'legal', 'hoa', 'home_warranty', 'other',
   ]),
-  description: z.string().min(1, 'Description is required'),
+  description: z.string().optional().default(''),
   transaction_date: z.string().min(1, 'Date is required'),
 });
 

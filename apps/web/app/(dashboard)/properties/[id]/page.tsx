@@ -7,6 +7,7 @@ import { Button } from '@onereal/ui';
 import { Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { DeletePropertyButton } from '@/components/properties/delete-property-button';
 
 export default async function PropertyDetailPage({
   params,
@@ -37,6 +38,7 @@ export default async function PropertyDetailPage({
               <Pencil className="h-4 w-4" /> Edit
             </Button>
           </Link>
+          <DeletePropertyButton propertyId={id} />
         </div>
       </div>
       <PropertyDetailTabs

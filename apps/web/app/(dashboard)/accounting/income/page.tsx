@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useUser } from '@onereal/auth';
 import { useIncome } from '@onereal/accounting';
 import { useProperties } from '@onereal/portfolio';
 import { deleteIncome } from '@onereal/accounting/actions/delete-income';
 import { IncomeDialog } from '@/components/accounting/income-dialog';
+import { DateRangeFilterClient, type DateRangeValue } from '@/components/accounting/date-range-filter-client';
 import {
   Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Badge,
@@ -22,8 +23,13 @@ export default function IncomePage() {
   const [search, setSearch] = useState('');
   const [propertyFilter, setPropertyFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('');
+  const [dateRange, setDateRange] = useState<DateRangeValue>({});
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIncome, setEditingIncome] = useState<Income | null>(null);
+
+  const handleDateRangeChange = useCallback((value: DateRangeValue) => {
+    setDateRange(value);
+  }, []);
 
   const { data: propertiesData } = useProperties({ orgId: activeOrg?.id ?? null });
   const properties = (propertiesData?.data ?? []) as any[];
@@ -33,6 +39,8 @@ export default function IncomePage() {
     propertyId: propertyFilter || undefined,
     incomeType: typeFilter || undefined,
     search: search || undefined,
+    from: dateRange.from,
+    to: dateRange.to,
   });
 
   const income = (incomeData ?? []) as Income[];
@@ -94,6 +102,8 @@ export default function IncomePage() {
           </SelectContent>
         </Select>
       </div>
+
+      <DateRangeFilterClient onChange={handleDateRangeChange} />
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading...</p>

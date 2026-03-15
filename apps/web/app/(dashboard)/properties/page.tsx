@@ -10,6 +10,9 @@ import {
   Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@onereal/ui';
 import { Plus, LayoutGrid, List } from 'lucide-react';
+import { deleteProperty } from '@onereal/portfolio/actions/delete-property';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function PropertiesPage() {
   const { activeOrg } = useUser();
@@ -17,6 +20,18 @@ export default function PropertiesPage() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const queryClient = useQueryClient();
+
+  async function handleDelete(propertyId: string) {
+    if (!confirm('Are you sure you want to delete this property? This will also delete all units and images.')) return;
+    const result = await deleteProperty(propertyId);
+    if (result.success) {
+      toast.success('Property deleted');
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
+    } else {
+      toast.error(result.error);
+    }
+  }
 
   const { data, isLoading } = useProperties({
     orgId: activeOrg?.id ?? null,
@@ -81,7 +96,7 @@ export default function PropertiesPage() {
           <Link href="/properties/new"><Button>Add your first property</Button></Link>
         </div>
       ) : view === 'table' ? (
-        <PropertyList data={properties as any} />
+        <PropertyList data={properties as any} onDelete={handleDelete} />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {properties.map((p: any) => <PropertyCard key={p.id} property={p} />)}

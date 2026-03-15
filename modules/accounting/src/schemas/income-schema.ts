@@ -5,7 +5,7 @@ export const incomeSchema = z.object({
   unit_id: z.string().uuid().optional().nullable(),
   amount: z.coerce.number().positive('Amount must be positive'),
   income_type: z.enum(['rent', 'deposit', 'late_fee', 'other']),
-  description: z.string().min(1, 'Description is required'),
+  description: z.string().optional().default(''),
   transaction_date: z.string().min(1, 'Date is required'),
 });
 

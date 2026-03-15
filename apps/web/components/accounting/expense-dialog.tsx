@@ -188,7 +188,7 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
             </div>
             <FormField control={form.control} name="description" render={({ field }) => (
               <FormItem>
-                <FormLabel>Description *</FormLabel>
+                <FormLabel>Description</FormLabel>
                 <FormControl>
                   <Textarea {...field} placeholder="Enter description" />
                 </FormControl>

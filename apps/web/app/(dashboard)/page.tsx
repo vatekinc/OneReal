@@ -3,7 +3,7 @@ import { getProfile, getPortfolioStats, getFinancialStats, getRecentTransactions
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@onereal/database';
 import { StatCard, Button, Card, CardContent, CardHeader, CardTitle } from '@onereal/ui';
-import { Building2, DoorOpen, Percent, DollarSign, TrendingUp, TrendingDown, Plus } from 'lucide-react';
+import { Building2, DoorOpen, DollarSign, TrendingUp, TrendingDown, Percent, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { RecentTransactions } from '@/components/accounting/recent-transactions';
 
@@ -98,8 +98,8 @@ export default async function DashboardPage() {
           description="This month"
         />
         <StatCard
-          title="Portfolio ROI"
-          value={`${financialStats.roi}%`}
+          title="Profit Margin"
+          value={`${financialStats.total_income > 0 ? Math.round((financialStats.net_income / financialStats.total_income) * 100) : 0}%`}
           icon={Percent}
           description="This month"
         />
