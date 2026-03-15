@@ -19,6 +19,7 @@ import type { Invoice } from '@onereal/types';
 const methodLabels: Record<string, string> = {
   cash: 'Cash',
   check: 'Check',
+  card: 'Card',
   bank_transfer: 'Bank Transfer',
   online: 'Online',
   other: 'Other',
