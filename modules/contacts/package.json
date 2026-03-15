@@ -1,0 +1,28 @@
+{
+  "name": "@onereal/contacts",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./actions/*": "./src/actions/*.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@onereal/database": "workspace:*",
+    "@onereal/types": "workspace:*",
+    "zod": "^3.23.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "next": "^15.0.0",
+    "@tanstack/react-query": "^5.60.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "next": "^15.0.0",
+    "@tanstack/react-query": "^5.60.0",
+    "typescript": "^5.6.0"
+  }
+}
