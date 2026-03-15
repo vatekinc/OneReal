@@ -26,7 +26,14 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/', icon: LayoutDashboard },
   { label: 'Properties', href: '/properties', icon: Building2 },
-  { label: 'Accounting', href: '/accounting', icon: Calculator },
+  {
+    label: 'Accounting', href: '/accounting', icon: Calculator,
+    children: [
+      { label: 'Financial Overview', href: '/accounting' },
+      { label: 'Incoming', href: '/accounting/incoming' },
+      { label: 'Outgoing', href: '/accounting/outgoing' },
+    ],
+  },
   {
     label: 'Contacts', href: '/contacts', icon: Users,
     children: [
@@ -78,7 +85,9 @@ function NavLink({
         {expanded && (
           <div className="ml-4 mt-1 flex flex-col gap-1 border-l pl-3">
             {item.children!.map((child) => {
-              const isChildActive = pathname.startsWith(child.href);
+              const isChildActive = child.href === '/accounting'
+                ? pathname === child.href
+                : pathname.startsWith(child.href);
               return (
                 <Link
                   key={child.href}

@@ -53,14 +53,14 @@ export default async function AccountingPage({ searchParams }: PageProps) {
         <div className="flex items-center gap-4">
           <h1 className="text-2xl font-bold">Financial Overview</h1>
           <div className="flex gap-2">
-            <Link href="/accounting/income">
+            <Link href="/accounting/incoming">
               <Button variant="outline" size="sm" className="gap-1">
-                Income <ArrowRight className="h-3 w-3" />
+                Incoming <ArrowRight className="h-3 w-3" />
               </Button>
             </Link>
-            <Link href="/accounting/expenses">
+            <Link href="/accounting/outgoing">
               <Button variant="outline" size="sm" className="gap-1">
-                Expenses <ArrowRight className="h-3 w-3" />
+                Outgoing <ArrowRight className="h-3 w-3" />
               </Button>
             </Link>
           </div>
