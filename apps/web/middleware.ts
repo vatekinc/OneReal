@@ -51,19 +51,44 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Authenticated user → check onboarding completion
-  if (user && !isOnboarding && !isPublicPath) {
-    const { data: profile } = await supabase
+  // Fetch profile (shared by onboarding check and role-based routing)
+  let profile: { first_name: string | null; default_org_id: string | null } | null = null;
+  if (user && !isPublicPath) {
+    const { data } = await supabase
       .from('profiles')
       .select('first_name, default_org_id')
       .eq('id', user.id)
       .single();
+    profile = data;
+  }
 
-    // Onboarding incomplete: first_name is null
-    if (!profile?.first_name) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/onboarding';
-      return NextResponse.redirect(url);
+  // Onboarding check (use shared profile)
+  if (user && !isOnboarding && !isPublicPath && !profile?.first_name) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/onboarding';
+    return NextResponse.redirect(url);
+  }
+
+  // Role-based tenant routing
+  if (user && !isOnboarding && !isPublicPath && profile?.default_org_id) {
+    const { data: membership } = await supabase
+      .from('org_members')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('org_id', profile.default_org_id)
+      .single();
+
+    const role = membership?.role;
+    const isTenantRoute = pathname.startsWith('/tenant');
+
+    if (role === 'tenant') {
+      const allowedPaths = ['/tenant', '/settings/profile'];
+      const isAllowed = allowedPaths.some(p => pathname.startsWith(p));
+      if (!isAllowed) {
+        return NextResponse.redirect(new URL('/tenant', request.url));
+      }
+    } else if (isTenantRoute) {
+      return NextResponse.redirect(new URL('/', request.url));
     }
   }
 
