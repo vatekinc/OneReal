@@ -35,6 +35,22 @@ export function useLeases(filters: LeaseFilters) {
         result = result.filter((lease: any) => lease.units?.property_id === filters.propertyId);
       }
 
+      // Compute displayStatus for month-to-month detection (read-only, no DB writes)
+      const today = new Date().toISOString().split('T')[0];
+      result = result.map((lease: any) => {
+        let displayStatus = lease.status;
+
+        if (lease.status === 'active' && lease.end_date && lease.end_date < today) {
+          if (lease.auto_month_to_month) {
+            displayStatus = 'month_to_month';
+          } else {
+            displayStatus = 'expired';
+          }
+        }
+
+        return { ...lease, displayStatus };
+      });
+
       return result;
     },
     enabled: !!filters.orgId,
