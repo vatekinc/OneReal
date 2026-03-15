@@ -359,7 +359,7 @@ async function assessLateFees(
     if (!inv.lease_id || !leaseFeesMap.has(inv.lease_id)) continue;
     if (hasLateFee.has(inv.id)) continue;
 
-    const leaseConfig = leaseFeesMap.get(inv.lease_id);
+    const leaseConfig = leaseFeesMap.get(inv.lease_id) as any;
     const graceDays = leaseConfig.late_fee_grace_days ?? 5;
 
     // Check grace period
@@ -533,7 +533,7 @@ export async function getGenerationPreview(
             if (!inv.lease_id || !leaseFeesMap.has(inv.lease_id)) continue;
             if (hasLateFee.has(inv.id)) continue;
 
-            const config = leaseFeesMap.get(inv.lease_id);
+            const config = leaseFeesMap.get(inv.lease_id) as any;
             const graceDays = config.late_fee_grace_days ?? 5;
             const dueDate = new Date(inv.due_date + 'T00:00:00');
             const todayDate = new Date(today + 'T00:00:00');

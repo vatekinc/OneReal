@@ -70,6 +70,7 @@ export {
   TableRow,
 } from './components/ui/table';
 export { Separator } from './components/ui/separator';
+export { Switch } from './components/ui/switch';
 export { ScrollArea, ScrollBar } from './components/ui/scroll-area';
 export {
   Tooltip,
