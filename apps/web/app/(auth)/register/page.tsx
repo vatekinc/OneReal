@@ -26,7 +26,7 @@ export default function RegisterPage() {
     }
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
@@ -34,6 +34,13 @@ export default function RegisterPage() {
 
     if (error) {
       toast.error(error.message);
+      setLoading(false);
+      return;
+    }
+
+    // If email confirmation is required, session will be null
+    if (!data.session) {
+      toast.success('Check your email to confirm your account before signing in.');
       setLoading(false);
       return;
     }
