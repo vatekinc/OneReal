@@ -6,6 +6,7 @@ import { useInvoices } from '@onereal/billing';
 import { useProperties } from '@onereal/portfolio';
 import { useTenants } from '@onereal/contacts';
 import { voidInvoice } from '@onereal/billing/actions/void-invoice';
+import { deleteInvoice } from '@onereal/billing/actions/delete-invoice';
 import { InvoiceTable } from '@/components/billing/invoice-table';
 import { InvoiceDialog } from '@/components/billing/invoice-dialog';
 import { PaymentDialog } from '@/components/billing/payment-dialog';
@@ -73,6 +74,18 @@ export default function IncomingPage() {
     if (result.success) {
       toast.success('Invoice voided');
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    } else {
+      toast.error(result.error);
+    }
+  }
+
+  async function handleDelete(invoice: Invoice) {
+    if (!confirm(`Delete invoice ${invoice.invoice_number}? This cannot be undone.`)) return;
+    const result = await deleteInvoice(invoice.id);
+    if (result.success) {
+      toast.success('Invoice deleted');
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-stats'] });
     } else {
       toast.error(result.error);
     }
@@ -150,6 +163,7 @@ export default function IncomingPage() {
           onPay={handlePay}
           onEdit={handleEdit}
           onVoid={handleVoid}
+          onDelete={handleDelete}
         />
       )}
 

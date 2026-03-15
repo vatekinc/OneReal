@@ -7,6 +7,7 @@ import { useExpenses } from '@onereal/accounting';
 import { useProperties } from '@onereal/portfolio';
 import { useProviders } from '@onereal/contacts';
 import { voidInvoice } from '@onereal/billing/actions/void-invoice';
+import { deleteInvoice } from '@onereal/billing/actions/delete-invoice';
 import { deleteExpense } from '@onereal/accounting/actions/delete-expense';
 import { InvoiceTable } from '@/components/billing/invoice-table';
 import { InvoiceDialog } from '@/components/billing/invoice-dialog';
@@ -78,6 +79,18 @@ export default function OutgoingPage() {
     if (result.success) {
       toast.success('Bill voided');
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    } else {
+      toast.error(result.error);
+    }
+  }
+
+  async function handleDeleteBill(invoice: Invoice) {
+    if (!confirm(`Delete bill ${invoice.invoice_number}? This cannot be undone.`)) return;
+    const result = await deleteInvoice(invoice.id);
+    if (result.success) {
+      toast.success('Bill deleted');
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-stats'] });
     } else {
       toast.error(result.error);
     }
@@ -169,6 +182,7 @@ export default function OutgoingPage() {
             onPay={handlePay}
             onEdit={handleEditBill}
             onVoid={handleVoidBill}
+            onDelete={handleDeleteBill}
           />
         )
       ) : (

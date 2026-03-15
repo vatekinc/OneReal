@@ -4,7 +4,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
   Button,
 } from '@onereal/ui';
-import { Pencil, DollarSign, Ban } from 'lucide-react';
+import { Pencil, DollarSign, Ban, Trash2 } from 'lucide-react';
 import type { Invoice } from '@onereal/types';
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -22,9 +22,10 @@ interface InvoiceTableProps {
   onPay: (invoice: Invoice) => void;
   onEdit: (invoice: Invoice) => void;
   onVoid: (invoice: Invoice) => void;
+  onDelete: (invoice: Invoice) => void;
 }
 
-export function InvoiceTable({ invoices, direction, onPay, onEdit, onVoid }: InvoiceTableProps) {
+export function InvoiceTable({ invoices, direction, onPay, onEdit, onVoid, onDelete }: InvoiceTableProps) {
   return (
     <div className="rounded-lg border">
       <Table>
@@ -46,6 +47,7 @@ export function InvoiceTable({ invoices, direction, onPay, onEdit, onVoid }: Inv
             const isPastDue = inv.displayStatus === 'overdue';
             const canPay = inv.status !== 'paid' && inv.status !== 'void';
             const canVoid = Number(inv.amount_paid) === 0 && inv.status !== 'void';
+            const canDelete = Number(inv.amount_paid) === 0 && inv.status !== 'void';
             const canEdit = inv.status !== 'void';
 
             return (
@@ -86,6 +88,11 @@ export function InvoiceTable({ invoices, direction, onPay, onEdit, onVoid }: Inv
                     {canVoid && (
                       <Button variant="ghost" size="icon" onClick={() => onVoid(inv)} title="Void">
                         <Ban className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
+                    {canDelete && (
+                      <Button variant="ghost" size="icon" onClick={() => onDelete(inv)} title="Delete">
+                        <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     )}
                   </div>
