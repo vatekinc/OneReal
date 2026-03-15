@@ -23,6 +23,9 @@ importers:
       '@hookform/resolvers':
         specifier: ^3.9.0
         version: 3.10.0(react-hook-form@7.71.2(react@19.2.4))
+      '@onereal/accounting':
+        specifier: workspace:*
+        version: link:../../modules/accounting
       '@onereal/auth':
         specifier: workspace:*
         version: link:../../packages/auth
@@ -99,6 +102,34 @@ importers:
       tailwindcss-animate:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@3.4.19)
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+
+  modules/accounting:
+    dependencies:
+      '@onereal/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@onereal/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      zod:
+        specifier: ^3.23.0
+        version: 3.25.76
+    devDependencies:
+      '@tanstack/react-query':
+        specifier: ^5.60.0
+        version: 5.90.21(react@19.2.4)
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.14
+      next:
+        specifier: ^15.0.0
+        version: 15.5.12(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       typescript:
         specifier: ^5.6.0
         version: 5.9.3

@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
+    "@onereal/accounting": "workspace:*",
     "@onereal/auth": "workspace:*",
     "@onereal/database": "workspace:*",
     "@onereal/portfolio": "workspace:*",
