@@ -35,8 +35,10 @@ export function PropertyFinancials({ data }: PropertyFinancialsProps) {
     { income: 0, expenses: 0, net: 0 },
   );
 
-  const totalRoi = totals.income > 0
-    ? ((totals.net / totals.income) * 100)
+  // Average ROI across properties that have ROI data (purchase price set)
+  const propertiesWithRoi = data.filter((r) => r.roi !== 0);
+  const totalRoi = propertiesWithRoi.length > 0
+    ? propertiesWithRoi.reduce((sum, r) => sum + r.roi, 0) / propertiesWithRoi.length
     : 0;
 
   return (
