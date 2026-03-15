@@ -9,9 +9,8 @@ import {
 } from '@onereal/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@onereal/database';
-import { StatCard, Button, Card, CardContent, CardHeader, CardTitle } from '@onereal/ui';
-import { DollarSign, TrendingDown, TrendingUp, Percent, ArrowRight } from 'lucide-react';
-import Link from 'next/link';
+import { StatCard, Card, CardContent, CardHeader, CardTitle } from '@onereal/ui';
+import { DollarSign, TrendingDown, TrendingUp, Percent } from 'lucide-react';
 import { DateRangeFilter } from '@/components/accounting/date-range-filter';
 import { IncomeExpenseChart } from '@/components/accounting/income-expense-chart';
 import { CategoryDonut } from '@/components/accounting/category-donut';
@@ -50,21 +49,7 @@ export default async function AccountingPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold">Financial Overview</h1>
-          <div className="flex gap-2">
-            <Link href="/accounting/incoming">
-              <Button variant="outline" size="sm" className="gap-1">
-                Incoming <ArrowRight className="h-3 w-3" />
-              </Button>
-            </Link>
-            <Link href="/accounting/outgoing">
-              <Button variant="outline" size="sm" className="gap-1">
-                Outgoing <ArrowRight className="h-3 w-3" />
-              </Button>
-            </Link>
-          </div>
-        </div>
+        <h1 className="text-2xl font-bold">Financial Overview</h1>
         <Suspense>
           <DateRangeFilter />
         </Suspense>

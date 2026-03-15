@@ -224,7 +224,7 @@ export function InvoiceDialog({ open, onOpenChange, invoice, defaultDirection }:
 
             <FormField control={form.control} name="description" render={({ field }) => (
               <FormItem>
-                <FormLabel>Description *</FormLabel>
+                <FormLabel>Description</FormLabel>
                 <FormControl>
                   <Textarea {...field} placeholder="e.g. Rent - April 2026" />
                 </FormControl>
