@@ -41,6 +41,9 @@ importers:
       '@onereal/portfolio':
         specifier: workspace:*
         version: link:../../modules/portfolio
+      '@onereal/tenant-portal':
+        specifier: workspace:*
+        version: link:../../modules/tenant-portal
       '@onereal/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -230,6 +233,24 @@ importers:
       typescript:
         specifier: ^5.6.0
         version: 5.9.3
+
+  modules/tenant-portal:
+    dependencies:
+      '@onereal/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@onereal/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+      '@tanstack/react-query':
+        specifier: ^5.60.0
+        version: 5.90.21(react@19.2.4)
+      next:
+        specifier: ^15.0.0
+        version: 15.5.12(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
 
   modules/tenants: {}
 

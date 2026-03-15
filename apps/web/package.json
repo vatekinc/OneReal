@@ -17,6 +17,7 @@
     "@onereal/contacts": "workspace:*",
     "@onereal/database": "workspace:*",
     "@onereal/portfolio": "workspace:*",
+    "@onereal/tenant-portal": "workspace:*",
     "@onereal/types": "workspace:*",
     "@onereal/ui": "workspace:*",
     "@supabase/ssr": "^0.5.0",
