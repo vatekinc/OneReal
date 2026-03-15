@@ -211,11 +211,15 @@ export interface Lease {
   rent_amount: number | null;
   deposit_amount: number | null;
   payment_due_day: number | null;
-  status: string;
+  status: 'draft' | 'active' | 'expired' | 'terminated' | 'month_to_month';
   terms: Record<string, unknown>;
   renewal_status: string | null;
   renewal_notes: string | null;
   renewed_from_id: string | null;
+  late_fee_type: 'flat' | 'percentage' | null;
+  late_fee_amount: number | null;
+  late_fee_grace_days: number | null;
+  auto_month_to_month: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -226,6 +230,20 @@ export interface LeaseDocument {
   filename: string;
   document_url: string;
   uploaded_at: string;
+}
+
+export interface LeaseCharge {
+  id: string;
+  org_id: string;
+  lease_id: string;
+  name: string;
+  amount: number;
+  frequency: 'monthly' | 'yearly' | 'one_time';
+  start_date: string;
+  end_date: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Invoice {
@@ -244,6 +262,8 @@ export interface Invoice {
   amount_paid: number;
   due_date: string;
   issued_date: string;
+  lease_charge_id: string | null;
+  late_fee_for_invoice_id: string | null;
   created_at: string;
   updated_at: string;
 }
