@@ -127,6 +127,7 @@ export interface Expense {
   description: string;
   transaction_date: string;
   receipt_url: string | null;
+  provider_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -169,4 +170,60 @@ export interface RecentTransaction {
   description: string;
   property_name: string;
   transaction_date: string;
+}
+
+export interface Tenant {
+  id: string;
+  org_id: string;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  phone: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  notes: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ServiceProvider {
+  id: string;
+  org_id: string;
+  name: string;
+  company_name: string | null;
+  email: string | null;
+  phone: string | null;
+  category: string;
+  notes: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Lease {
+  id: string;
+  org_id: string;
+  unit_id: string;
+  tenant_id: string;
+  start_date: string | null;
+  end_date: string | null;
+  rent_amount: number | null;
+  deposit_amount: number | null;
+  payment_due_day: number | null;
+  status: string;
+  terms: Record<string, unknown>;
+  renewal_status: string | null;
+  renewal_notes: string | null;
+  renewed_from_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LeaseDocument {
+  id: string;
+  lease_id: string;
+  filename: string;
+  document_url: string;
+  uploaded_at: string;
 }

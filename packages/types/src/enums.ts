@@ -145,3 +145,32 @@ export const ExpenseType = {
   OTHER: 'other',
 } as const;
 export type ExpenseType = (typeof ExpenseType)[keyof typeof ExpenseType];
+
+export const TenantStatus = {
+  ACTIVE: 'active',
+  INACTIVE: 'inactive',
+} as const;
+export type TenantStatus = (typeof TenantStatus)[keyof typeof TenantStatus];
+
+export const ProviderCategory = {
+  PLUMBER: 'plumber',
+  ELECTRICIAN: 'electrician',
+  HVAC: 'hvac',
+  GENERAL_CONTRACTOR: 'general_contractor',
+  CLEANER: 'cleaner',
+  LANDSCAPER: 'landscaper',
+  PAINTER: 'painter',
+  ROOFER: 'roofer',
+  PEST_CONTROL: 'pest_control',
+  LOCKSMITH: 'locksmith',
+  APPLIANCE_REPAIR: 'appliance_repair',
+  OTHER: 'other',
+} as const;
+export type ProviderCategory = (typeof ProviderCategory)[keyof typeof ProviderCategory];
+
+export const RenewalStatus = {
+  UPCOMING: 'upcoming',
+  RENEWED: 'renewed',
+  NOT_RENEWING: 'not_renewing',
+} as const;
+export type RenewalStatus = (typeof RenewalStatus)[keyof typeof RenewalStatus];
