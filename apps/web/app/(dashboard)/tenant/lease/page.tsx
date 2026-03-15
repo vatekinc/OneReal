@@ -51,10 +51,10 @@ export default function TenantLeasePage() {
               <p className="text-sm text-muted-foreground">Unit</p>
               <p className="font-medium">{lease.units?.unit_number ?? '—'}</p>
             </div>
-            {lease.units?.properties?.address && (
+            {lease.units?.properties?.address_line1 && (
               <div className="sm:col-span-2">
                 <p className="text-sm text-muted-foreground">Address</p>
-                <p className="font-medium">{lease.units.properties.address}</p>
+                <p className="font-medium">{lease.units.properties.address_line1}</p>
               </div>
             )}
           </div>
