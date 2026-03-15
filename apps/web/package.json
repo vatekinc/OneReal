@@ -10,32 +10,33 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@hookform/resolvers": "^3.9.0",
+    "@onereal/auth": "workspace:*",
+    "@onereal/database": "workspace:*",
+    "@onereal/portfolio": "workspace:*",
+    "@onereal/types": "workspace:*",
+    "@onereal/ui": "workspace:*",
+    "@supabase/ssr": "^0.5.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "@tanstack/react-query": "^5.60.0",
+    "@tanstack/react-table": "^8.20.0",
+    "lucide-react": "^0.577.0",
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "@supabase/supabase-js": "^2.45.0",
-    "@supabase/ssr": "^0.5.0",
-    "@tanstack/react-query": "^5.60.0",
-    "@tanstack/react-table": "^8.20.0",
     "react-hook-form": "^7.53.0",
-    "@hookform/resolvers": "^3.9.0",
-    "zod": "^3.23.0",
-    "lucide-react": "^0.577.0",
     "sonner": "^1.5.0",
-    "@onereal/ui": "workspace:*",
-    "@onereal/database": "workspace:*",
-    "@onereal/auth": "workspace:*",
-    "@onereal/types": "workspace:*",
-    "@onereal/portfolio": "workspace:*"
+    "zod": "^3.23.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@types/node": "^22.0.0",
-    "typescript": "^5.6.0",
-    "tailwindcss": "^3.4.0",
-    "postcss": "^8.4.0",
     "autoprefixer": "^10.4.0",
-    "tailwindcss-animate": "^1.0.7"
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.6.0"
   }
 }

@@ -8,3 +8,6 @@ dist/
 .DS_Store
 next-env.d.ts
 *.log
+node_modules
+test-results/
+playwright-report/
