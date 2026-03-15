@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
-export default function TenantsPage() {
+export default function ContactsPage() {
   redirect('/contacts/tenants');
 }

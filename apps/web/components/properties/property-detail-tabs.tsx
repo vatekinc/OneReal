@@ -1,12 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, Badge, StatCard, Button } from '@onereal/ui';
-import { DoorOpen, Percent, DollarSign, MapPin, BedDouble, Bath, Ruler, Pencil } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, Badge, StatCard, Button,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@onereal/ui';
+import { DoorOpen, Percent, DollarSign, MapPin, BedDouble, Bath, Ruler, Pencil, Plus } from 'lucide-react';
 import type { Property, Unit, PropertyImage } from '@onereal/types';
 import { UnitTable } from './unit-table';
 import { ImageGallery } from './image-gallery';
 import { UnitDialog } from './unit-dialog';
+import { useUser } from '@onereal/auth';
+import { useLeases } from '@onereal/contacts';
+import { LeaseDialog } from '@/components/contacts/lease-dialog';
+import Link from 'next/link';
 
 const SINGLE_UNIT_TYPES = ['single_family', 'townhouse', 'condo'];
 
@@ -31,7 +36,7 @@ export function PropertyDetailTabs({ property, units, images }: PropertyDetailTa
           <TabsTrigger value="units">Units ({units.length})</TabsTrigger>
         )}
         <TabsTrigger value="images">Images ({images.length})</TabsTrigger>
-        <TabsTrigger value="activity">Activity</TabsTrigger>
+        <TabsTrigger value="leases">Leases</TabsTrigger>
       </TabsList>
 
       <TabsContent value="overview" className="space-y-4">
@@ -74,14 +79,89 @@ export function PropertyDetailTabs({ property, units, images }: PropertyDetailTa
         <ImageGallery images={images} propertyId={property.id} />
       </TabsContent>
 
-      <TabsContent value="activity">
-        <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
-            Lease and transaction history will appear here in a future update.
-          </CardContent>
-        </Card>
+      <TabsContent value="leases">
+        <PropertyLeases propertyId={property.id} />
       </TabsContent>
     </Tabs>
+  );
+}
+
+const leaseStatusColors: Record<string, string> = {
+  draft: 'bg-gray-100 text-gray-800',
+  active: 'bg-green-100 text-green-800',
+  expired: 'bg-yellow-100 text-yellow-800',
+  terminated: 'bg-red-100 text-red-800',
+};
+
+function PropertyLeases({ propertyId }: { propertyId: string }) {
+  const { activeOrg } = useUser();
+  const { data: leasesData } = useLeases({
+    orgId: activeOrg?.id ?? null,
+    propertyId,
+  });
+  const leases = (leasesData ?? []) as any[];
+  const [leaseDialogOpen, setLeaseDialogOpen] = useState(false);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button size="sm" className="gap-2" onClick={() => setLeaseDialogOpen(true)}>
+          <Plus className="h-4 w-4" /> Add Lease
+        </Button>
+      </div>
+      {leases.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center text-muted-foreground">
+            No leases for this property yet.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Tenant</TableHead>
+                <TableHead>Unit</TableHead>
+                <TableHead>Start Date</TableHead>
+                <TableHead>End Date</TableHead>
+                <TableHead className="text-right">Rent</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {leases.map((lease: any) => (
+                <TableRow key={lease.id}>
+                  <TableCell>
+                    {lease.tenants ? (
+                      <Link href={`/contacts/tenants/${lease.tenant_id}`} className="text-primary hover:underline">
+                        {lease.tenants.first_name} {lease.tenants.last_name}
+                      </Link>
+                    ) : '\u2014'}
+                  </TableCell>
+                  <TableCell>{lease.units?.unit_number ?? '\u2014'}</TableCell>
+                  <TableCell>{lease.start_date ? new Date(lease.start_date).toLocaleDateString() : '\u2014'}</TableCell>
+                  <TableCell>{lease.end_date ? new Date(lease.end_date).toLocaleDateString() : '\u2014'}</TableCell>
+                  <TableCell className="text-right font-medium">
+                    {lease.rent_amount ? `$${Number(lease.rent_amount).toLocaleString()}` : '\u2014'}
+                  </TableCell>
+                  <TableCell>
+                    <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${leaseStatusColors[lease.status] ?? ''}`}>
+                      {lease.status}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+      <LeaseDialog
+        open={leaseDialogOpen}
+        onOpenChange={setLeaseDialogOpen}
+        lease={null}
+        defaultPropertyId={propertyId}
+      />
+    </div>
   );
 }
 

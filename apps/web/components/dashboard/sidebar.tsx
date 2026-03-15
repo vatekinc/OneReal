@@ -6,19 +6,39 @@ import { usePathname } from 'next/navigation';
 import { cn, Button, Sheet, SheetContent, SheetTrigger, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@onereal/ui';
 import {
   LayoutDashboard, Building2, Calculator, Users, Wrench,
-  Settings, ChevronLeft, ChevronRight, Menu,
+  Settings, ChevronLeft, ChevronRight, ChevronDown, Menu,
 } from 'lucide-react';
 
-const navItems = [
-  { label: 'Dashboard', href: '/', icon: LayoutDashboard, disabled: false },
-  { label: 'Properties', href: '/properties', icon: Building2, disabled: false },
-  { label: 'Accounting', href: '/accounting', icon: Calculator, disabled: false },
-  { label: 'Tenants', href: '/tenants', icon: Users, disabled: true, badge: 'Soon' },
+interface NavChild {
+  label: string;
+  href: string;
+}
+
+interface NavItem {
+  label: string;
+  href: string;
+  icon: any;
+  disabled?: boolean;
+  badge?: string;
+  children?: NavChild[];
+}
+
+const navItems: NavItem[] = [
+  { label: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { label: 'Properties', href: '/properties', icon: Building2 },
+  { label: 'Accounting', href: '/accounting', icon: Calculator },
+  {
+    label: 'Contacts', href: '/contacts', icon: Users,
+    children: [
+      { label: 'Tenants', href: '/contacts/tenants' },
+      { label: 'Service Providers', href: '/contacts/providers' },
+    ],
+  },
   { label: 'Maintenance', href: '/maintenance', icon: Wrench, disabled: true, badge: 'Soon' },
 ];
 
-const bottomItems = [
-  { label: 'Settings', href: '/settings', icon: Settings, disabled: false },
+const bottomItems: NavItem[] = [
+  { label: 'Settings', href: '/settings', icon: Settings },
 ];
 
 function NavLink({
@@ -26,20 +46,73 @@ function NavLink({
   collapsed,
   pathname,
 }: {
-  item: (typeof navItems)[0];
+  item: NavItem;
   collapsed: boolean;
   pathname: string;
 }) {
-  const isActive =
-    item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
+  const isParentActive = item.href === '/'
+    ? pathname === '/'
+    : pathname.startsWith(item.href);
+  const hasChildren = item.children && item.children.length > 0;
+  const [expanded, setExpanded] = useState(isParentActive && hasChildren);
   const Icon = item.icon;
+
+  // For items with children
+  if (hasChildren && !collapsed) {
+    return (
+      <div>
+        <button
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+          className={cn(
+            'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+            isParentActive
+              ? 'bg-primary/10 text-primary'
+              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+          )}
+        >
+          <Icon className="h-4 w-4 shrink-0" />
+          <span className="flex-1 text-left">{item.label}</span>
+          <ChevronDown className={cn('h-3 w-3 transition-transform', expanded && 'rotate-180')} />
+        </button>
+        {expanded && (
+          <div className="ml-4 mt-1 flex flex-col gap-1 border-l pl-3">
+            {item.children!.map((child) => {
+              const isChildActive = pathname.startsWith(child.href);
+              return (
+                <Link
+                  key={child.href}
+                  href={child.href}
+                  className={cn(
+                    'rounded-lg px-3 py-1.5 text-sm transition-colors',
+                    isChildActive
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                  )}
+                >
+                  {child.label}
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Collapsed sidebar with children — navigate to first child
+  const href = item.disabled
+    ? '#'
+    : hasChildren
+      ? item.children![0].href
+      : item.href;
 
   const link = (
     <Link
-      href={item.disabled ? '#' : item.href}
+      href={href}
       className={cn(
         'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
-        isActive
+        isParentActive
           ? 'bg-primary text-primary-foreground'
           : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
         item.disabled && 'pointer-events-none opacity-50',

@@ -8,6 +8,7 @@ import { createExpense } from '@onereal/accounting/actions/create-expense';
 import { updateExpense } from '@onereal/accounting/actions/update-expense';
 import { useUser } from '@onereal/auth';
 import { useProperties } from '@onereal/portfolio';
+import { useProviders } from '@onereal/contacts';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
@@ -44,6 +45,8 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
   const { activeOrg } = useUser();
   const { data: propertiesData } = useProperties({ orgId: activeOrg?.id ?? null });
   const properties = (propertiesData?.data ?? []) as any[];
+  const { data: providersData } = useProviders({ orgId: activeOrg?.id ?? null });
+  const providers = (providersData ?? []) as any[];
 
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
@@ -54,6 +57,7 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
       expense_type: expense.expense_type as ExpenseFormValues['expense_type'],
       description: expense.description,
       transaction_date: expense.transaction_date,
+      provider_id: expense.provider_id ?? undefined,
     } : {
       property_id: '',
       unit_id: undefined,
@@ -61,6 +65,7 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
       expense_type: 'mortgage',
       description: '',
       transaction_date: new Date().toISOString().split('T')[0],
+      provider_id: undefined,
     },
   });
 
@@ -73,6 +78,7 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
         expense_type: expense.expense_type as ExpenseFormValues['expense_type'],
         description: expense.description,
         transaction_date: expense.transaction_date,
+        provider_id: expense.provider_id ?? undefined,
       } : {
         property_id: '',
         unit_id: undefined,
@@ -80,6 +86,7 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
         expense_type: 'mortgage',
         description: '',
         transaction_date: new Date().toISOString().split('T')[0],
+        provider_id: undefined,
       });
     }
   }, [open, expense, form]);
@@ -170,6 +177,21 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
                     <SelectContent>
                       {Object.entries(expenseTypeLabels).map(([value, label]) => (
                         <SelectItem key={value} value={value}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="provider_id" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Service Provider</FormLabel>
+                  <Select onValueChange={(v) => field.onChange(v === 'none' ? null : v)} defaultValue={field.value ?? 'none'}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="None" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {providers.map((p: any) => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}{p.company_name ? ` (${p.company_name})` : ''}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

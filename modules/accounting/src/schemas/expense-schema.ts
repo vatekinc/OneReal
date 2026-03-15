@@ -10,6 +10,7 @@ export const expenseSchema = z.object({
   ]),
   description: z.string().optional().default(''),
   transaction_date: z.string().min(1, 'Date is required'),
+  provider_id: z.string().uuid().optional().nullable(),
 });
 
 export type ExpenseFormValues = z.infer<typeof expenseSchema>;

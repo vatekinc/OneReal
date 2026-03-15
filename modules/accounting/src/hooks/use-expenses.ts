@@ -10,6 +10,7 @@ export interface ExpenseFilters {
   search?: string;
   from?: string;
   to?: string;
+  providerId?: string;
 }
 
 export function useExpenses(filters: ExpenseFilters) {
@@ -19,7 +20,7 @@ export function useExpenses(filters: ExpenseFilters) {
       const supabase = createClient();
       let query = (supabase as any)
         .from('expenses')
-        .select('*, properties(name), units(unit_number)')
+        .select('*, properties(name), units(unit_number), service_providers(name, company_name)')
         .eq('org_id', filters.orgId)
         .order('transaction_date', { ascending: false });
 
@@ -31,6 +32,9 @@ export function useExpenses(filters: ExpenseFilters) {
       }
       if (filters.search) {
         query = query.ilike('description', `%${filters.search}%`);
+      }
+      if (filters.providerId) {
+        query = query.eq('provider_id', filters.providerId);
       }
       if (filters.from) {
         query = query.gte('transaction_date', filters.from);
