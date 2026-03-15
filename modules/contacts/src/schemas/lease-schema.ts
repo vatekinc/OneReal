@@ -10,6 +10,10 @@ export const leaseSchema = z.object({
   deposit_amount: z.coerce.number().min(0).optional().default(0),
   payment_due_day: z.coerce.number().min(1).max(28).optional().default(1),
   status: z.enum(['draft', 'active', 'expired', 'terminated']).default('draft'),
+  auto_month_to_month: z.boolean().optional().default(true),
+  late_fee_type: z.enum(['flat', 'percentage']).nullable().optional().default(null),
+  late_fee_amount: z.coerce.number().positive().nullable().optional().default(null),
+  late_fee_grace_days: z.coerce.number().int().min(1).nullable().optional().default(null),
 }).refine((data) => data.end_date > data.start_date, {
   message: 'End date must be after start date',
   path: ['end_date'],
