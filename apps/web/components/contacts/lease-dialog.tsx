@@ -92,6 +92,13 @@ export function LeaseDialog({ open, onOpenChange, lease, defaultTenantId, defaul
   );
   const units = (selectedProperty as any)?.units ?? [];
 
+  // Auto-select unit when there's only one (single-unit property types)
+  useEffect(() => {
+    if (units.length === 1 && form.getValues('unit_id') !== units[0].id) {
+      form.setValue('unit_id', units[0].id);
+    }
+  }, [units, form]);
+
   async function onSubmit(values: LeaseFormValues) {
     if (!activeOrg) {
       toast.error('No active organization');
@@ -121,7 +128,15 @@ export function LeaseDialog({ open, onOpenChange, lease, defaultTenantId, defaul
           <DialogTitle>{lease ? 'Edit Lease' : 'Add Lease'}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            // Auto-fill unit for single-unit properties before validation
+            if (units.length === 1) form.setValue('unit_id', units[0].id);
+            form.handleSubmit(onSubmit, (errors) => {
+              const first = Object.entries(errors)[0];
+              if (first) toast.error(`${first[0]}: ${first[1]?.message}`);
+            })();
+          }} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField control={form.control} name="property_id" render={({ field }) => (
                 <FormItem>
@@ -137,20 +152,22 @@ export function LeaseDialog({ open, onOpenChange, lease, defaultTenantId, defaul
                   <FormMessage />
                 </FormItem>
               )} />
-              <FormField control={form.control} name="unit_id" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Unit *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      {units.map((u: any) => (
-                        <SelectItem key={u.id} value={u.id}>{u.unit_number}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
+              {units.length > 1 && (
+                <FormField control={form.control} name="unit_id" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Unit *</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {units.map((u: any) => (
+                          <SelectItem key={u.id} value={u.id}>{u.unit_number}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              )}
               <FormField control={form.control} name="tenant_id" render={({ field }) => (
                 <FormItem className="sm:col-span-2">
                   <FormLabel>Tenant *</FormLabel>
