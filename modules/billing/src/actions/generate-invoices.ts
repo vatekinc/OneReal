@@ -25,6 +25,8 @@ export async function generateInvoices(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, error: 'Not authenticated' };
 
+    if (month < 1 || month > 12) return { success: false, error: 'Invalid month' };
+
     const db = supabase as any;
     const monthName = monthNames[month - 1];
     const startOfMonth = `${year}-${String(month).padStart(2, '0')}-01`;
@@ -48,18 +50,23 @@ export async function generateInvoices(
     // 2. Auto-update status for expired leases
     for (const lease of leases) {
       if (lease.end_date && lease.end_date < today && lease.auto_month_to_month !== false) {
-        // Check if still marked as 'active' (not yet transitioned)
-        await db
+        const { error: transitionError } = await db
           .from('leases')
           .update({ status: 'month_to_month' })
           .eq('id', lease.id)
           .eq('status', 'active');
+        if (transitionError) {
+          return { success: false, error: `Failed to transition lease ${lease.id} to month-to-month: ${transitionError.message}` };
+        }
       } else if (lease.end_date && lease.end_date < today && lease.auto_month_to_month === false) {
-        await db
+        const { error: expireError } = await db
           .from('leases')
           .update({ status: 'expired' })
           .eq('id', lease.id)
           .eq('status', 'active');
+        if (expireError) {
+          return { success: false, error: `Failed to expire lease ${lease.id}: ${expireError.message}` };
+        }
       }
     }
 
@@ -153,7 +160,7 @@ export async function generateInvoices(
       // 5a. Rent invoice
       if (lease.rent_amount && lease.rent_amount > 0) {
         if (!existingRentInvoices.has(lease.id)) {
-          const result = await createInvoice(db, orgId, {
+          const result = await insertInvoiceRecord(db, orgId, {
             lease_id: lease.id,
             tenant_id: lease.tenant_id,
             property_id: propertyId,
@@ -183,7 +190,7 @@ export async function generateInvoices(
           const key = `${charge.id}-${month}-${year}`;
           if (existingChargeInvoices.has(key)) continue;
 
-          const result = await createInvoice(db, orgId, {
+          const result = await insertInvoiceRecord(db, orgId, {
             lease_id: lease.id,
             tenant_id: lease.tenant_id,
             property_id: propertyId,
@@ -207,7 +214,7 @@ export async function generateInvoices(
           const key = `${charge.id}-${month}-${year}`;
           if (existingChargeInvoices.has(key)) continue;
 
-          const result = await createInvoice(db, orgId, {
+          const result = await insertInvoiceRecord(db, orgId, {
             lease_id: lease.id,
             tenant_id: lease.tenant_id,
             property_id: propertyId,
@@ -227,7 +234,7 @@ export async function generateInvoices(
           const key = `${charge.id}-onetime`;
           if (existingChargeInvoices.has(key)) continue;
 
-          const result = await createInvoice(db, orgId, {
+          const result = await insertInvoiceRecord(db, orgId, {
             lease_id: lease.id,
             tenant_id: lease.tenant_id,
             property_id: propertyId,
@@ -257,7 +264,7 @@ export async function generateInvoices(
 }
 
 // Helper: create a single invoice with auto-generated invoice number
-async function createInvoice(
+async function insertInvoiceRecord(
   db: any,
   orgId: string,
   data: {
@@ -374,7 +381,7 @@ async function assessLateFees(
 
     if (feeAmount <= 0) continue;
 
-    const result = await createInvoice(db, orgId, {
+    const result = await insertInvoiceRecord(db, orgId, {
       lease_id: inv.lease_id,
       tenant_id: inv.tenant_id,
       property_id: inv.property_id,
