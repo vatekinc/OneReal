@@ -15,6 +15,9 @@ export async function createUnit(
     }
 
     const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: 'Not authenticated' };
+
     const db = supabase as any;
 
     const { data, error } = await db

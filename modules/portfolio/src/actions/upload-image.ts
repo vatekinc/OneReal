@@ -24,6 +24,9 @@ export async function uploadImage(
     }
 
     const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: 'Not authenticated' };
+
     const db = supabase as any;
 
     // Check image count

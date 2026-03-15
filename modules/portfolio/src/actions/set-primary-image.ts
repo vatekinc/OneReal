@@ -9,6 +9,9 @@ export async function setPrimaryImage(
 ): Promise<ActionResult> {
   try {
     const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: 'Not authenticated' };
+
     const db = supabase as any;
 
     // Unset current primary

@@ -6,6 +6,9 @@ import type { ActionResult } from '@onereal/types';
 export async function deleteUnit(unitId: string, propertyId: string): Promise<ActionResult> {
   try {
     const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: 'Not authenticated' };
+
     const db = supabase as any;
 
     // Prevent deleting last unit

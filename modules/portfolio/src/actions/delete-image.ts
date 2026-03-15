@@ -6,6 +6,9 @@ import type { ActionResult } from '@onereal/types';
 export async function deleteImage(imageId: string): Promise<ActionResult> {
   try {
     const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: 'Not authenticated' };
+
     const db = supabase as any;
 
     // Get image URL to delete from storage
