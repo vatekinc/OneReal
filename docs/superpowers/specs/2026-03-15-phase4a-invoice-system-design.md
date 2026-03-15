@@ -58,7 +58,7 @@ The existing standalone income and expenses pages are being replaced by the new 
 | org_id | UUID | FK → organizations, NOT NULL |
 | invoice_number | TEXT | NOT NULL, unique per org (e.g., INV-2026-0001) |
 | direction | TEXT | NOT NULL. Values: `'receivable'`, `'payable'` |
-| status | TEXT | NOT NULL, default `'open'`. Values: `'draft'`, `'open'`, `'partially_paid'`, `'paid'`, `'void'`, `'overdue'` |
+| status | TEXT | NOT NULL, default `'open'`. Values: `'draft'`, `'open'`, `'partially_paid'`, `'paid'`, `'void'` |
 | lease_id | UUID | FK → leases, nullable (set for auto-generated receivables) |
 | tenant_id | UUID | FK → tenants, nullable (set for receivables) |
 | provider_id | UUID | FK → service_providers, nullable (set for payables) |
