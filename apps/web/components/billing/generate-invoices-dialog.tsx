@@ -43,11 +43,16 @@ export function GenerateInvoicesDialog({ open, onOpenChange }: GenerateInvoicesD
     setIsGenerating(false);
 
     if (result.success) {
-      if (result.data.created > 0) {
-        toast.success(`Created ${result.data.created} invoice(s)${result.data.skipped > 0 ? `, ${result.data.skipped} skipped` : ''}`);
+      if (result.data.created > 0 || result.data.lateFees > 0) {
+        let msg = `Created ${result.data.created} invoice(s)`;
+        if (result.data.lateFees > 0) msg += `, ${result.data.lateFees} late fee(s)`;
+        if (result.data.skipped > 0) msg += `, ${result.data.skipped} skipped`;
+        toast.success(msg);
       } else if (result.data.skipped > 0) {
         const reason = result.data.skipReasons?.[0] ?? 'Unknown reason';
         toast.error(`Skipped ${result.data.skipped} invoice(s): ${reason}`);
+      } else {
+        toast.info('No invoices to generate');
       }
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['invoice-generation-preview'] });
@@ -102,11 +107,18 @@ export function GenerateInvoicesDialog({ open, onOpenChange }: GenerateInvoicesD
             {previewLoading ? (
               <p className="text-sm text-muted-foreground">Checking active leases...</p>
             ) : preview ? (
-              <p className="text-sm text-muted-foreground">
-                This will create invoices for <strong className="text-foreground">{preview.eligible} active lease(s)</strong>
-                {' '}that don&apos;t have {monthNames[month - 1]} {year} invoices yet.
-                {preview.existing > 0 && ` (${preview.existing} already exist)`}
-              </p>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  This will create invoices for <strong className="text-foreground">{preview.eligible} active lease(s)</strong>
+                  {' '}that don&apos;t have {monthNames[month - 1]} {year} invoices yet.
+                  {preview.existing > 0 && ` (${preview.existing} already exist)`}
+                </p>
+                {preview?.lateFees > 0 && (
+                  <p className="text-sm text-amber-600 mt-1">
+                    + {preview.lateFees} late fee(s) to assess
+                  </p>
+                )}
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground">No active leases found.</p>
             )}
@@ -116,9 +128,11 @@ export function GenerateInvoicesDialog({ open, onOpenChange }: GenerateInvoicesD
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button
               onClick={handleGenerate}
-              disabled={isGenerating || !preview?.eligible}
+              disabled={isGenerating || (!preview?.eligible && !preview?.lateFees)}
             >
-              {isGenerating ? 'Generating...' : `Generate ${preview?.eligible ?? 0} Invoice(s)`}
+              {isGenerating
+                ? 'Generating...'
+                : `Generate ${(preview?.eligible ?? 0) + (preview?.lateFees ?? 0)} Invoice(s)`}
             </Button>
           </div>
         </div>
