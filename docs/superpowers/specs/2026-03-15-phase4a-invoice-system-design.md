@@ -34,7 +34,13 @@ modules/billing/
 - `apps/web/app/(dashboard)/accounting/outgoing/page.tsx`
 
 **Modified pages:**
-- `apps/web/app/(dashboard)/accounting/page.tsx` — remains as Financial Overview (existing charts + stats)
+- `apps/web/app/(dashboard)/accounting/page.tsx` — remains as Financial Overview; update "Income" and "Expenses" buttons to link to `/accounting/incoming` and `/accounting/outgoing`
+
+**Existing pages migrated into new structure:**
+- `apps/web/app/(dashboard)/accounting/income/page.tsx` — **remove**; direct income entry moves into the Incoming page (or can be done via ad-hoc invoice creation)
+- `apps/web/app/(dashboard)/accounting/expenses/page.tsx` — **remove**; direct expense entry moves into the Outgoing page's "Expenses" tab
+
+The existing standalone income and expenses pages are being replaced by the new Incoming/Outgoing pages which provide a superset of functionality (invoices + direct manual entries). The existing manual income/expense dialogs and components are reused within the new pages.
 
 **Modified components:**
 - `apps/web/components/dashboard/sidebar.tsx` — Accounting becomes collapsible with children
@@ -59,8 +65,8 @@ modules/billing/
 | property_id | UUID | FK → properties, NOT NULL |
 | unit_id | UUID | FK → units, nullable |
 | description | TEXT | NOT NULL (e.g., "Rent - April 2026") |
-| amount | DECIMAL(12,2) | NOT NULL (total due) |
-| amount_paid | DECIMAL(12,2) | NOT NULL, default 0 (running total of payments) |
+| amount | DECIMAL(10,2) | NOT NULL, CHECK (amount > 0) |
+| amount_paid | DECIMAL(10,2) | NOT NULL, default 0 (running total of payments) |
 | due_date | DATE | NOT NULL |
 | issued_date | DATE | NOT NULL, default CURRENT_DATE |
 | created_at | TIMESTAMPTZ | default now() |
@@ -79,7 +85,7 @@ modules/billing/
 | id | UUID | PK, default gen_random_uuid() |
 | org_id | UUID | FK → organizations, NOT NULL |
 | invoice_id | UUID | FK → invoices, NOT NULL |
-| amount | DECIMAL(12,2) | NOT NULL |
+| amount | DECIMAL(10,2) | NOT NULL, CHECK (amount > 0) |
 | payment_date | DATE | NOT NULL |
 | payment_method | TEXT | NOT NULL. Values: `'cash'`, `'check'`, `'bank_transfer'`, `'online'`, `'other'` |
 | reference_number | TEXT | nullable (check number, transaction ID) |
@@ -100,7 +106,7 @@ draft ──► open ──► partially_paid ──► paid
   └──► void       └──► partially_paid ──► paid
 ```
 
-**Note:** `overdue` is a computed status — invoices remain `open` or `partially_paid` in the database, but display as `overdue` when `due_date < today` and `status` is `open` or `partially_paid`. This avoids a scheduled job just for status updates.
+**Note:** `overdue` is a computed status — invoices remain `open` or `partially_paid` in the database, but display as `overdue` when `due_date < today` and `status` is `open` or `partially_paid`. This avoids a scheduled job just for status updates. The computation lives in the `useInvoices` hook, which adds a `displayStatus` field derived from `status` and `due_date`.
 
 ### Key Design Decisions
 
@@ -198,7 +204,7 @@ Accounting changes from a flat nav item to a collapsible parent (same pattern as
 **Tabs:** Open Bills (default) | Paid Bills | Expenses
 
 - Open Bills / Paid Bills tabs show the same table layout as Incoming but for payable invoices (vendor name instead of tenant)
-- Expenses tab shows existing manual expense entries (preserves current functionality)
+- Expenses tab shows **all** expense records (both manually entered and auto-created from bill payments). This replaces the standalone `/accounting/expenses` page. Includes the existing "+ Add Expense" dialog for quick manual entry.
 
 ### Record Payment Dialog
 
@@ -226,7 +232,7 @@ Triggered by clicking "Pay" on an invoice:
 
 **Triggers:**
 1. **Manual** — "Generate Invoices" button on Incoming page
-2. **Scheduled** — Supabase pg_cron job on 1st of each month (or Edge Function)
+2. **Scheduled** — deferred to Phase 4B (pg_cron or Edge Function on 1st of each month)
 
 **Process:**
 1. Scan all active leases where `status = 'active'`
@@ -238,7 +244,7 @@ Triggered by clicking "Pay" on an invoice:
    - `property_id = unit.property_id`
    - `unit_id = lease.unit_id`
    - `amount = lease.rent_amount`
-   - `due_date = {year}-{month}-{lease.due_day}`
+   - `due_date = {year}-{month}-{lease.payment_due_day}`
    - `status = 'open'`
    - `description = "Rent - {Month Year}"`
    - `invoice_number = next sequence`
@@ -280,8 +286,33 @@ Sequence is per-org, auto-incrementing. Implemented as a database function:
 ### `modules/billing/`
 
 **Schemas:**
-- `invoice-schema.ts` — Zod schema for invoice create/edit
-- `payment-schema.ts` — Zod schema for recording payments
+
+`invoice-schema.ts`:
+```ts
+export const invoiceSchema = z.object({
+  direction: z.enum(['receivable', 'payable']),
+  tenant_id: z.string().uuid().optional().nullable(),
+  provider_id: z.string().uuid().optional().nullable(),
+  property_id: z.string().uuid('Select a property'),
+  unit_id: z.string().uuid().optional().nullable(),
+  description: z.string().min(1, 'Description is required'),
+  amount: z.coerce.number().positive('Amount must be positive'),
+  due_date: z.string().min(1, 'Due date is required'),
+  issued_date: z.string().optional(),
+});
+```
+
+`payment-schema.ts`:
+```ts
+export const paymentSchema = z.object({
+  invoice_id: z.string().uuid(),
+  amount: z.coerce.number().positive('Amount must be positive'),
+  payment_date: z.string().min(1, 'Payment date is required'),
+  payment_method: z.enum(['cash', 'check', 'bank_transfer', 'online', 'other']),
+  reference_number: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+```
 
 **Actions:**
 - `create-invoice.ts` — Create a single invoice (manual)
@@ -300,26 +331,86 @@ Sequence is per-org, auto-incrementing. Implemented as a database function:
 ## Integration with Existing Tables
 
 ### Income Table
-When a receivable invoice payment is recorded:
-- Auto-create an `income` row with:
-  - `property_id` from the invoice
-  - `amount` from the payment
-  - `date` from payment date
-  - `category = 'rent'` (or mapped from invoice description)
-  - `description` linking to invoice number
+When a receivable invoice payment is recorded, auto-create an `income` row:
+
+| income column | Source |
+|---|---|
+| `org_id` | `invoice.org_id` |
+| `property_id` | `invoice.property_id` |
+| `unit_id` | `invoice.unit_id` (nullable) |
+| `amount` | `payment.amount` |
+| `income_type` | `'rent'` (or mapped: deposit invoices → `'deposit'`, other → `'other'`) |
+| `description` | `"Payment for {invoice.invoice_number}"` |
+| `transaction_date` | `payment.payment_date` |
 
 ### Expenses Table
-When a payable invoice payment is recorded:
-- Auto-create an `expense` row with:
-  - `property_id` from the invoice
-  - `amount` from the payment
-  - `date` from payment date
-  - `category` from invoice or provider category
-  - `provider_id` from the invoice
-  - `description` linking to invoice number
+When a payable invoice payment is recorded, auto-create an `expense` row:
+
+| expense column | Source |
+|---|---|
+| `org_id` | `invoice.org_id` |
+| `property_id` | `invoice.property_id` |
+| `unit_id` | `invoice.unit_id` (nullable) |
+| `amount` | `payment.amount` |
+| `expense_type` | `'maintenance'` (default, or mapped from provider category) |
+| `description` | `"Payment for {invoice.invoice_number}"` |
+| `transaction_date` | `payment.payment_date` |
+| `provider_id` | `invoice.provider_id` |
 
 ### Financial Overview
 The existing `/accounting` page (Financial Overview) continues to work as-is — it reads from `income` and `expenses` tables, which are now populated both by manual entries and by invoice payments.
+
+---
+
+## TypeScript Interfaces
+
+Add to `packages/types/src/models.ts`:
+
+```ts
+export interface Invoice {
+  id: string;
+  org_id: string;
+  invoice_number: string;
+  direction: 'receivable' | 'payable';
+  status: 'draft' | 'open' | 'partially_paid' | 'paid' | 'void';
+  lease_id: string | null;
+  tenant_id: string | null;
+  provider_id: string | null;
+  property_id: string;
+  unit_id: string | null;
+  description: string;
+  amount: number;
+  amount_paid: number;
+  due_date: string;
+  issued_date: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Payment {
+  id: string;
+  org_id: string;
+  invoice_id: string;
+  amount: number;
+  payment_date: string;
+  payment_method: 'cash' | 'check' | 'bank_transfer' | 'online' | 'other';
+  reference_number: string | null;
+  notes: string | null;
+  income_id: string | null;
+  expense_id: string | null;
+  created_at: string;
+}
+```
+
+---
+
+## Edge Cases
+
+- **Overpayment:** The `record-payment` action rejects payments where `payment.amount > (invoice.amount - invoice.amount_paid)`. Users must enter at most the remaining balance.
+- **Voiding invoices with payments:** Invoices with any recorded payments cannot be voided. Only invoices with `amount_paid = 0` can be voided.
+- **Editing invoices with payments:** The `amount` field cannot be reduced below `amount_paid`. Other fields (description, due_date) can still be edited.
+- **Payments are immutable:** Once recorded, payments cannot be edited or deleted. To correct a mistake, void the invoice (if no payments) or create a new adjusting invoice.
+- **Duplicate generation guard:** The `generate-invoices` action checks for existing invoices with the same `lease_id` + month/year before creating, ensuring idempotency even if the button is clicked multiple times.
 
 ---
 
@@ -348,6 +439,6 @@ The existing `/accounting` page (Financial Overview) continues to work as-is —
 
 ## Migration Plan
 
-**New migration:** Creates `invoices` and `payments` tables, RLS policies, indexes, and the invoice number sequence function.
+**New migration:** Creates `invoices` and `payments` tables, RLS policies, indexes, invoice number sequence function, and `moddatetime` trigger on `invoices.updated_at` (following the established pattern from migrations 003, 006, 007).
 
 **No changes** to existing `income`, `expenses`, `leases`, `tenants`, or `service_providers` tables — the new system integrates through foreign keys and auto-created records.
