@@ -227,3 +227,37 @@ export interface LeaseDocument {
   document_url: string;
   uploaded_at: string;
 }
+
+export interface Invoice {
+  id: string;
+  org_id: string;
+  invoice_number: string;
+  direction: 'receivable' | 'payable';
+  status: 'draft' | 'open' | 'partially_paid' | 'paid' | 'void';
+  lease_id: string | null;
+  tenant_id: string | null;
+  provider_id: string | null;
+  property_id: string;
+  unit_id: string | null;
+  description: string;
+  amount: number;
+  amount_paid: number;
+  due_date: string;
+  issued_date: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Payment {
+  id: string;
+  org_id: string;
+  invoice_id: string;
+  amount: number;
+  payment_date: string;
+  payment_method: 'cash' | 'check' | 'bank_transfer' | 'online' | 'other';
+  reference_number: string | null;
+  notes: string | null;
+  income_id: string | null;
+  expense_id: string | null;
+  created_at: string;
+}
