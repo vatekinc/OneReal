@@ -50,7 +50,7 @@ const tenantNavItems: NavItem[] = [
   { label: 'Home', href: '/tenant', icon: Home },
   { label: 'My Lease', href: '/tenant/lease', icon: FileText },
   { label: 'Payments', href: '/tenant/payments', icon: CreditCard },
-  // Maintenance coming soon — omitted until feature is available
+  { label: 'Maintenance', href: '/maintenance', icon: Wrench, disabled: true, badge: 'Soon' },
 ];
 
 const bottomItems: NavItem[] = [

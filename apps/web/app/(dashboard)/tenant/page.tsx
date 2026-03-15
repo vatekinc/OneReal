@@ -5,7 +5,6 @@ import { useUser } from '@onereal/auth';
 import {
   Card, CardContent, CardHeader, CardTitle, Badge,
 } from '@onereal/ui';
-import { Home, FileText } from 'lucide-react';
 import Link from 'next/link';
 
 const statusColors: Record<string, string> = {

@@ -59,10 +59,14 @@ export async function inviteTenant(
     }
 
     // Update invited_at timestamp
-    await db
+    const { error: updateError } = await db
       .from('tenants')
       .update({ invited_at: new Date().toISOString() })
       .eq('id', tenantId);
+
+    if (updateError) {
+      return { success: false, error: 'Invite sent but failed to update status' };
+    }
 
     return { success: true, data: undefined };
   } catch {
