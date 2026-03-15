@@ -1,27 +1,39 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { getProfile, getPortfolioStats } from '@onereal/database';
+import { getProfile, getPortfolioStats, getFinancialStats, getRecentTransactions } from '@onereal/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@onereal/database';
-import { StatCard, Button } from '@onereal/ui';
-import { Building2, DoorOpen, Percent, DollarSign, Plus } from 'lucide-react';
+import { StatCard, Button, Card, CardContent, CardHeader, CardTitle } from '@onereal/ui';
+import { Building2, DoorOpen, Percent, DollarSign, TrendingUp, TrendingDown, Plus } from 'lucide-react';
 import Link from 'next/link';
+import { RecentTransactions } from '@/components/accounting/recent-transactions';
 
 type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 
 export default async function DashboardPage() {
   const supabaseRaw = await createServerSupabaseClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = supabaseRaw as unknown as SupabaseClient<Database>;
 
   const { data: { user } } = await supabase.auth.getUser();
-
   if (!user) return null;
 
   const profile = await getProfile(supabase, user.id).catch(() => null) as ProfileRow | null;
-
   if (!profile?.default_org_id) return null;
 
-  const stats = await getPortfolioStats(supabase, profile.default_org_id);
+  const orgId = profile.default_org_id;
+
+  // Compute current month date range
+  const now = new Date();
+  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const dateRange = {
+    from: firstOfMonth.toISOString().split('T')[0],
+    to: now.toISOString().split('T')[0],
+  };
+
+  const [portfolioStats, financialStats, recentTransactions] = await Promise.all([
+    getPortfolioStats(supabase, orgId),
+    getFinancialStats(supabase, orgId, dateRange),
+    getRecentTransactions(supabase, orgId, 10),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -37,39 +49,74 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
+      {/* Row 1: Portfolio Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Properties"
-          value={stats.total_properties}
+          value={portfolioStats.total_properties}
           icon={Building2}
           description="Active properties"
         />
         <StatCard
           title="Total Units"
-          value={stats.total_units}
+          value={portfolioStats.total_units}
           icon={DoorOpen}
-          description={`${stats.occupied_units} occupied`}
+          description={`${portfolioStats.occupied_units} occupied`}
         />
         <StatCard
           title="Occupancy Rate"
-          value={`${stats.occupancy_rate}%`}
+          value={`${portfolioStats.occupancy_rate}%`}
           icon={Percent}
           description="Across all properties"
         />
         <StatCard
           title="Rent Potential"
-          value={`$${stats.total_rent_potential.toLocaleString()}`}
+          value={`$${portfolioStats.total_rent_potential.toLocaleString()}`}
           icon={DollarSign}
           description="Monthly total"
         />
       </div>
 
-      <div className="rounded-lg border bg-card p-6">
-        <h3 className="mb-2 font-medium">Recent Activity</h3>
-        <p className="text-sm text-muted-foreground">
-          Activity will appear here as you manage properties.
-        </p>
+      {/* Row 2: Financial Stats (current month) */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Monthly Income"
+          value={`$${financialStats.total_income.toLocaleString()}`}
+          icon={TrendingUp}
+          trend={{ value: financialStats.income_change, positive: financialStats.income_change >= 0 }}
+        />
+        <StatCard
+          title="Monthly Expenses"
+          value={`$${financialStats.total_expenses.toLocaleString()}`}
+          icon={TrendingDown}
+          trend={{ value: financialStats.expense_change, positive: financialStats.expense_change <= 0 }}
+        />
+        <StatCard
+          title="Net Income"
+          value={`$${financialStats.net_income.toLocaleString()}`}
+          icon={DollarSign}
+          description="This month"
+        />
+        <StatCard
+          title="Portfolio ROI"
+          value={`${financialStats.roi}%`}
+          icon={Percent}
+          description="This month"
+        />
       </div>
+
+      {/* Row 3: Recent Transactions */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base">Recent Transactions</CardTitle>
+          <Link href="/accounting" className="text-sm text-primary hover:underline">
+            View All
+          </Link>
+        </CardHeader>
+        <CardContent>
+          <RecentTransactions transactions={recentTransactions} />
+        </CardContent>
+      </Card>
     </div>
   );
 }
