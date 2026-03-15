@@ -12,6 +12,7 @@ export function useLeaseCharges(leaseId: string | null) {
         .from('lease_charges')
         .select('*')
         .eq('lease_id', leaseId)
+        .eq('is_active', true)
         .order('created_at', { ascending: true });
 
       if (error) throw error;

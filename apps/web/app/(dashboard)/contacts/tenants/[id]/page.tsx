@@ -20,6 +20,7 @@ const statusColors: Record<string, string> = {
   active: 'bg-green-100 text-green-800',
   expired: 'bg-yellow-100 text-yellow-800',
   terminated: 'bg-red-100 text-red-800',
+  month_to_month: 'bg-purple-100 text-purple-800',
 };
 
 export default function TenantDetailPage() {
@@ -144,8 +145,8 @@ export default function TenantDetailPage() {
                       {lease.rent_amount ? `$${Number(lease.rent_amount).toLocaleString()}` : '\u2014'}
                     </TableCell>
                     <TableCell>
-                      <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${statusColors[lease.status] ?? ''}`}>
-                        {lease.status}
+                      <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${statusColors[lease.displayStatus ?? lease.status] ?? ''}`}>
+                        {(lease.displayStatus ?? lease.status).replace('_', ' ')}
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
