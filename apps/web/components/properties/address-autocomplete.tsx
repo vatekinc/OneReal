@@ -1,10 +1,6 @@
 'use client';
 
-import { useRef, useCallback } from 'react';
-import { LoadScript, Autocomplete } from '@react-google-maps/api';
-import { Input } from '@onereal/ui';
-
-const libraries: ('places')[] = ['places'];
+import { useRef, useEffect, useCallback, useState } from 'react';
 
 interface AddressComponents {
   address_line1: string;
@@ -19,6 +15,30 @@ interface AddressAutocompleteProps {
   onChange: (value: string) => void;
   onAddressSelect: (components: AddressComponents) => void;
   placeholder?: string;
+}
+
+// Load Google Maps script exactly once
+let scriptLoadPromise: Promise<void> | null = null;
+function loadGoogleMapsScript(apiKey: string): Promise<void> {
+  if (scriptLoadPromise) return scriptLoadPromise;
+  if (typeof window !== 'undefined' && window.google?.maps?.places) {
+    return Promise.resolve();
+  }
+
+  scriptLoadPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => {
+      scriptLoadPromise = null;
+      reject(new Error('Failed to load Google Maps'));
+    };
+    document.head.appendChild(script);
+  });
+
+  return scriptLoadPromise;
 }
 
 function parsePlace(place: google.maps.places.PlaceResult): AddressComponents {
@@ -70,59 +90,54 @@ export function AddressAutocomplete({
   onAddressSelect,
   placeholder = 'Start typing an address...',
 }: AddressAutocompleteProps) {
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-  const onLoad = useCallback((autocomplete: google.maps.places.Autocomplete) => {
-    autocompleteRef.current = autocomplete;
-  }, []);
-
-  const onPlaceChanged = useCallback(() => {
+  const handlePlaceChanged = useCallback(() => {
     const place = autocompleteRef.current?.getPlace();
     if (!place?.address_components) return;
 
     const parsed = parsePlace(place);
     onAddressSelect(parsed);
 
-    // Sync the input value with React state
+    // Sync the displayed value back to React state
     if (inputRef.current) {
       onChange(inputRef.current.value);
     }
   }, [onAddressSelect, onChange]);
 
-  // No API key — plain input fallback
-  if (!apiKey) {
-    return (
-      <Input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="Enter address"
-      />
-    );
-  }
+  useEffect(() => {
+    if (!apiKey) return;
+
+    loadGoogleMapsScript(apiKey)
+      .then(() => setLoaded(true))
+      .catch(() => {/* script failed to load, input still works as plain text */});
+  }, [apiKey]);
+
+  useEffect(() => {
+    if (!loaded || !inputRef.current || autocompleteRef.current) return;
+
+    const ac = new google.maps.places.Autocomplete(inputRef.current, {
+      componentRestrictions: { country: 'us' },
+      types: ['address'],
+      fields: ['address_components', 'formatted_address'],
+    });
+
+    ac.addListener('place_changed', handlePlaceChanged);
+    autocompleteRef.current = ac;
+  }, [loaded, handlePlaceChanged]);
 
   return (
-    <LoadScript googleMapsApiKey={apiKey} libraries={libraries}>
-      <Autocomplete
-        onLoad={onLoad}
-        onPlaceChanged={onPlaceChanged}
-        options={{
-          componentRestrictions: { country: 'us' },
-          types: ['address'],
-          fields: ['address_components', 'formatted_address'],
-        }}
-      >
-        <input
-          ref={inputRef}
-          type="text"
-          defaultValue={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          autoComplete="off"
-          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-        />
-      </Autocomplete>
-    </LoadScript>
+    <input
+      ref={inputRef}
+      type="text"
+      defaultValue={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={apiKey ? placeholder : 'Enter address'}
+      autoComplete="off"
+      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+    />
   );
 }
