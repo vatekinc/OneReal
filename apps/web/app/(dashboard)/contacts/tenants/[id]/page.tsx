@@ -5,13 +5,14 @@ import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@onereal/auth';
 import { useTenant, useLeases } from '@onereal/contacts';
 import { deleteLease } from '@onereal/contacts/actions/delete-lease';
+import { inviteTenant } from '@onereal/tenant-portal/actions/invite-tenant';
 import { TenantDialog } from '@/components/contacts/tenant-dialog';
 import { LeaseDialog } from '@/components/contacts/lease-dialog';
 import {
   Button, Card, CardContent, CardHeader, CardTitle, Badge,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@onereal/ui';
-import { ArrowLeft, Pencil, Plus, Trash2, Mail, Phone, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Pencil, Plus, Trash2, Mail, Phone, AlertTriangle, Send, CheckCircle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -22,6 +23,59 @@ const statusColors: Record<string, string> = {
   terminated: 'bg-red-100 text-red-800',
   month_to_month: 'bg-purple-100 text-purple-800',
 };
+
+function InviteStatus({ tenant }: { tenant: any }) {
+  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
+
+  async function handleInvite() {
+    setLoading(true);
+    const result = await inviteTenant(tenant.id);
+    setLoading(false);
+    if (result.success) {
+      toast.success('Invite sent!');
+      queryClient.invalidateQueries({ queryKey: ['tenant'] });
+    } else {
+      toast.error(result.error);
+    }
+  }
+
+  if (!tenant.email) {
+    return (
+      <Badge variant="outline" className="text-muted-foreground">
+        Add email to invite
+      </Badge>
+    );
+  }
+
+  if (tenant.user_id) {
+    return (
+      <Badge className="bg-green-100 text-green-800 gap-1">
+        <CheckCircle className="h-3 w-3" /> Portal Active
+      </Badge>
+    );
+  }
+
+  if (tenant.invited_at) {
+    return (
+      <div className="flex items-center gap-2">
+        <Badge variant="outline" className="gap-1">
+          <Clock className="h-3 w-3" /> Invite Pending
+        </Badge>
+        <Button variant="ghost" size="sm" onClick={handleInvite} disabled={loading}>
+          {loading ? 'Sending...' : 'Resend'}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <Button variant="outline" size="sm" className="gap-2" onClick={handleInvite} disabled={loading}>
+      <Send className="h-4 w-4" />
+      {loading ? 'Sending...' : 'Invite to Portal'}
+    </Button>
+  );
+}
 
 export default function TenantDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -65,6 +119,7 @@ export default function TenantDetailPage() {
         <Badge variant={tenant.status === 'active' ? 'default' : 'secondary'}>
           {tenant.status}
         </Badge>
+        <InviteStatus tenant={tenant} />
       </div>
 
       <Card>
