@@ -36,6 +36,17 @@ export default function OnboardingPage() {
         last_name: lastName,
         phone: phone || undefined,
       });
+
+      // Check if this user was invited as a tenant
+      const { data: isTenant } = await supabase.rpc('check_is_invited_tenant');
+
+      if (isTenant) {
+        // Link tenant and redirect to portal — skip org selection step
+        await supabase.rpc('link_tenant_on_invite');
+        router.push('/tenant');
+        return;
+      }
+
       setStep(2);
     } catch {
       toast.error('Failed to save profile');
