@@ -41,7 +41,7 @@ export function IncomeExpenseChart({ data }: IncomeExpenseChartProps) {
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
         <XAxis dataKey="month" tickFormatter={formatMonth} className="text-xs" />
         <YAxis tickFormatter={formatCurrency} className="text-xs" />
-        <Tooltip formatter={(value: number) => formatCurrency(value)} />
+        <Tooltip formatter={(value) => formatCurrency(Number(value))} />
         <Legend />
         <Bar dataKey="income" fill="#22c55e" radius={[4, 4, 0, 0]} />
         <Bar dataKey="expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />

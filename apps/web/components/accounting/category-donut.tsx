@@ -66,9 +66,9 @@ export function CategoryDonut({ data, title }: CategoryDonutProps) {
             ))}
           </Pie>
           <Tooltip
-            formatter={(value: number, name: string) => [
-              formatCurrency(value),
-              formatCategory(name),
+            formatter={(value, name) => [
+              formatCurrency(Number(value)),
+              formatCategory(String(name)),
             ]}
           />
         </PieChart>

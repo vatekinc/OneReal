@@ -35,7 +35,7 @@ export function IncomeDialog({ open, onOpenChange, income }: IncomeDialogProps) 
   const queryClient = useQueryClient();
   const { activeOrg } = useUser();
   const { data: propertiesData } = useProperties({ orgId: activeOrg?.id ?? null });
-  const properties = propertiesData?.data ?? [];
+  const properties = (propertiesData?.data ?? []) as any[];
 
   const form = useForm<IncomeFormValues>({
     resolver: zodResolver(incomeSchema),

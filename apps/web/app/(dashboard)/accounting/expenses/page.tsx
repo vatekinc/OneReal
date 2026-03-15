@@ -41,7 +41,7 @@ export default function ExpensesPage() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
   const { data: propertiesData } = useProperties({ orgId: activeOrg?.id ?? null });
-  const properties = propertiesData?.data ?? [];
+  const properties = (propertiesData?.data ?? []) as any[];
 
   const { data: expenseData, isLoading } = useExpenses({
     orgId: activeOrg?.id ?? null,

@@ -43,7 +43,7 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
   const queryClient = useQueryClient();
   const { activeOrg } = useUser();
   const { data: propertiesData } = useProperties({ orgId: activeOrg?.id ?? null });
-  const properties = propertiesData?.data ?? [];
+  const properties = (propertiesData?.data ?? []) as any[];
 
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema),

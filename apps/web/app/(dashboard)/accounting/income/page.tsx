@@ -26,7 +26,7 @@ export default function IncomePage() {
   const [editingIncome, setEditingIncome] = useState<Income | null>(null);
 
   const { data: propertiesData } = useProperties({ orgId: activeOrg?.id ?? null });
-  const properties = propertiesData?.data ?? [];
+  const properties = (propertiesData?.data ?? []) as any[];
 
   const { data: incomeData, isLoading } = useIncome({
     orgId: activeOrg?.id ?? null,
