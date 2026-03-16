@@ -38,6 +38,12 @@ importers:
       '@onereal/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@onereal/maintenance':
+        specifier: workspace:*
+        version: link:../../modules/maintenance
+      '@onereal/messaging':
+        specifier: workspace:*
+        version: link:../../modules/messaging
       '@onereal/portfolio':
         specifier: workspace:*
         version: link:../../modules/portfolio
@@ -146,6 +152,22 @@ importers:
         specifier: ^5.6.0
         version: 5.9.3
 
+  modules/admin:
+    dependencies:
+      '@onereal/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@onereal/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+    devDependencies:
+      next:
+        specifier: ^15.0.0
+        version: 15.5.12(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+
   modules/billing:
     dependencies:
       '@onereal/database':
@@ -204,7 +226,54 @@ importers:
 
   modules/listings: {}
 
-  modules/maintenance: {}
+  modules/maintenance:
+    dependencies:
+      '@onereal/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@onereal/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+      '@tanstack/react-query':
+        specifier: ^5.60.0
+        version: 5.90.21(react@19.2.4)
+      next:
+        specifier: ^15.0.0
+        version: 15.5.12(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      zod:
+        specifier: ^3.23.0
+        version: 3.25.76
+    devDependencies:
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.14
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+
+  modules/messaging:
+    dependencies:
+      '@onereal/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@onereal/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+      '@tanstack/react-query':
+        specifier: ^5.60.0
+        version: 5.90.21(react@19.2.4)
+      next:
+        specifier: ^15.0.0
+        version: 15.5.12(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      zod:
+        specifier: ^3.23.0
+        version: 3.25.76
 
   modules/portfolio:
     dependencies:
