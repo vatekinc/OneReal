@@ -3,15 +3,18 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useTenantInvoices } from '@onereal/tenant-portal';
 import {
-  Card, CardContent, CardHeader, CardTitle,
+  Card, CardContent,
   Button,
   Tabs, TabsContent, TabsList, TabsTrigger,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@onereal/ui';
 import { toast } from 'sonner';
 import { createCheckoutSession } from '@onereal/payments/actions/create-checkout-session';
+import { calculateConvenienceFee } from '@onereal/payments/lib/fees';
 import { createClient } from '@onereal/database';
 import { useSearchParams } from 'next/navigation';
+import { CreditCard, Landmark } from 'lucide-react';
 
 const statusColors: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-800',
@@ -38,7 +41,9 @@ function TenantPaymentsContent() {
   const [onlinePayEnabled, setOnlinePayEnabled] = useState(false);
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
 
-  // Check if online payments are available based on first invoice's org
+  // Payment method dialog state
+  const [payDialog, setPayDialog] = useState<{ invoiceId: string; orgId: string; amount: number } | null>(null);
+
   useEffect(() => {
     if (!invoices || invoices.length === 0) return;
     const orgId = invoices[0].org_id;
@@ -59,7 +64,6 @@ function TenantPaymentsContent() {
     checkOnline();
   }, [invoices]);
 
-  // Show toast on redirect back
   useEffect(() => {
     if (searchParams.get('payment') === 'success') {
       toast.success('Payment submitted successfully!');
@@ -68,11 +72,20 @@ function TenantPaymentsContent() {
     }
   }, [searchParams]);
 
-  async function handlePayOnline(invoiceId: string, orgId: string) {
-    setPayingInvoiceId(invoiceId);
-    const result = await createCheckoutSession(orgId, {
+  function handlePayClick(inv: any) {
+    const remaining = Number(inv.amount) - Number(inv.amount_paid || 0);
+    setPayDialog({ invoiceId: inv.id, orgId: inv.org_id, amount: remaining });
+  }
+
+  async function handleMethodSelect(method: 'card' | 'us_bank_account') {
+    if (!payDialog) return;
+    setPayingInvoiceId(payDialog.invoiceId);
+    setPayDialog(null);
+
+    const result = await createCheckoutSession(payDialog.orgId, {
       type: 'payment',
-      invoiceId,
+      invoiceId: payDialog.invoiceId,
+      paymentMethod: method,
     });
     if (result.success) {
       window.location.href = result.data.url;
@@ -81,6 +94,9 @@ function TenantPaymentsContent() {
       setPayingInvoiceId(null);
     }
   }
+
+  const cardFee = payDialog ? calculateConvenienceFee(payDialog.amount, 'card') : 0;
+  const achFee = payDialog ? calculateConvenienceFee(payDialog.amount, 'us_bank_account') : 0;
 
   return (
     <div className="space-y-6">
@@ -101,7 +117,6 @@ function TenantPaymentsContent() {
               ) : !invoices || invoices.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">No invoices found.</p>
               ) : (
-                <>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -134,7 +149,7 @@ function TenantPaymentsContent() {
                             {['open', 'partially_paid'].includes(inv.status) && (
                               <Button
                                 size="sm"
-                                onClick={() => handlePayOnline(inv.id, inv.org_id)}
+                                onClick={() => handlePayClick(inv)}
                                 disabled={payingInvoiceId === inv.id}
                               >
                                 {payingInvoiceId === inv.id ? 'Redirecting...' : 'Pay Now'}
@@ -146,17 +161,56 @@ function TenantPaymentsContent() {
                     ))}
                   </TableBody>
                 </Table>
-                {onlinePayEnabled && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    A processing fee (2.9% + $0.30) will be added at checkout.
-                  </p>
-                )}
-                </>
               )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Payment method selector dialog */}
+      <Dialog open={!!payDialog} onOpenChange={(open) => !open && setPayDialog(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Choose Payment Method</DialogTitle>
+            <DialogDescription>
+              Select how you&apos;d like to pay ${payDialog?.amount.toLocaleString()}.
+              A processing fee applies based on the method chosen.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 pt-2">
+            <button
+              onClick={() => handleMethodSelect('card')}
+              className="flex items-center gap-4 rounded-lg border p-4 text-left hover:bg-accent transition-colors"
+            >
+              <CreditCard className="h-6 w-6 text-muted-foreground shrink-0" />
+              <div className="flex-1">
+                <p className="font-medium">Credit / Debit Card</p>
+                <p className="text-sm text-muted-foreground">
+                  Fee: ${cardFee.toFixed(2)} (2.9% + $0.30)
+                </p>
+              </div>
+              <p className="font-semibold text-sm">
+                ${((payDialog?.amount ?? 0) + cardFee).toFixed(2)}
+              </p>
+            </button>
+            <button
+              onClick={() => handleMethodSelect('us_bank_account')}
+              className="flex items-center gap-4 rounded-lg border p-4 text-left hover:bg-accent transition-colors"
+            >
+              <Landmark className="h-6 w-6 text-muted-foreground shrink-0" />
+              <div className="flex-1">
+                <p className="font-medium">Bank Account (ACH)</p>
+                <p className="text-sm text-muted-foreground">
+                  Fee: ${achFee.toFixed(2)} (0.8%, max $5)
+                </p>
+              </div>
+              <p className="font-semibold text-sm">
+                ${((payDialog?.amount ?? 0) + achFee).toFixed(2)}
+              </p>
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

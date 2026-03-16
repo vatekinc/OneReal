@@ -2,7 +2,7 @@
 
 import { createServerSupabaseClient } from '@onereal/database/server';
 import { getStripe } from '../lib/stripe';
-import { calculateConvenienceFee } from '../lib/fees';
+import { calculateConvenienceFee, type PaymentMethod } from '../lib/fees';
 import type { ActionResult } from '@onereal/types';
 
 interface SubscriptionCheckoutOptions {
@@ -14,6 +14,7 @@ interface SubscriptionCheckoutOptions {
 interface PaymentCheckoutOptions {
   type: 'payment';
   invoiceId: string;
+  paymentMethod: PaymentMethod;
 }
 
 type CheckoutOptions = SubscriptionCheckoutOptions | PaymentCheckoutOptions;
@@ -101,11 +102,16 @@ export async function createCheckoutSession(
       }
 
       const remaining = Number((invoice as any).amount) - Number((invoice as any).amount_paid);
-      const fee = calculateConvenienceFee(remaining);
+      const method = options.paymentMethod;
+      const fee = calculateConvenienceFee(remaining, method);
+
+      // Only offer the method the tenant chose in the pre-checkout step
+      const paymentMethodTypes: ('card' | 'us_bank_account' | 'link')[] =
+        method === 'us_bank_account' ? ['us_bank_account'] : ['card', 'link'];
 
       const session = await stripe.checkout.sessions.create({
         mode: 'payment',
-        payment_method_types: ['card', 'us_bank_account', 'link'],
+        payment_method_types: paymentMethodTypes,
         line_items: [
           {
             price_data: {
