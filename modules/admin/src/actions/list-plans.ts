@@ -11,7 +11,7 @@ export async function listPlans(): Promise<ActionResult<PlanListItem[]>> {
 
     const { data, error } = await db
       .from('plans')
-      .select('id, name, slug, max_properties, features, is_default, organizations(count)')
+      .select('id, name, slug, max_properties, features, is_default, monthly_price, yearly_price, organizations(count)')
       .order('created_at', { ascending: true });
 
     if (error) throw error;
@@ -23,6 +23,8 @@ export async function listPlans(): Promise<ActionResult<PlanListItem[]>> {
       max_properties: p.max_properties,
       features: p.features ?? { online_payments: false, messaging: false },
       is_default: p.is_default,
+      monthly_price: p.monthly_price ?? 0,
+      yearly_price: p.yearly_price ?? 0,
       org_count: p.organizations?.[0]?.count ?? 0,
     }));
 

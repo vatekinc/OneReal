@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useUser } from '@onereal/auth';
 import { createClient, updateOrganization, getOrgMembers, getOrgPlan } from '@onereal/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -18,6 +18,14 @@ import { getConnectStatus } from '@onereal/payments/actions/get-connect-status';
 import { useSearchParams } from 'next/navigation';
 
 export default function OrgSettingsPage() {
+  return (
+    <Suspense>
+      <OrgSettingsContent />
+    </Suspense>
+  );
+}
+
+function OrgSettingsContent() {
   const { activeOrg } = useUser();
   const searchParams = useSearchParams();
   const [name, setName] = useState('');

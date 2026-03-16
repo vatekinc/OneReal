@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useTenantInvoices } from '@onereal/tenant-portal';
 import {
   Card, CardContent, CardHeader, CardTitle,
@@ -24,6 +24,14 @@ const statusColors: Record<string, string> = {
 };
 
 export default function TenantPaymentsPage() {
+  return (
+    <Suspense>
+      <TenantPaymentsContent />
+    </Suspense>
+  );
+}
+
+function TenantPaymentsContent() {
   const searchParams = useSearchParams();
   const [filter, setFilter] = useState<'open' | 'paid' | 'all'>('all');
   const { data: invoices, isLoading } = useTenantInvoices(filter);
@@ -93,6 +101,7 @@ export default function TenantPaymentsPage() {
               ) : !invoices || invoices.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">No invoices found.</p>
               ) : (
+                <>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -142,6 +151,7 @@ export default function TenantPaymentsPage() {
                     A processing fee (2.9% + $0.30) will be added at checkout.
                   </p>
                 )}
+                </>
               )}
             </CardContent>
           </Card>

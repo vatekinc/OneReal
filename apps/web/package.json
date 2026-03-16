@@ -19,6 +19,7 @@
     "@onereal/database": "workspace:*",
     "@onereal/maintenance": "workspace:*",
     "@onereal/messaging": "workspace:*",
+    "@onereal/payments": "workspace:*",
     "@onereal/portfolio": "workspace:*",
     "@onereal/tenant-portal": "workspace:*",
     "@onereal/types": "workspace:*",

@@ -147,7 +147,7 @@ async function handleCheckoutCompleted(
     if (!invoice || ['paid', 'processing'].includes((invoice as any).status)) return;
 
     const paymentIntent = session.payment_intent as string;
-    if (session.payment_status === 'processing') {
+    if ((session.payment_status as string) === 'processing') {
       // ACH: payment_status is 'processing' (card would be 'paid')
       await db.from('invoices').update({
         status: 'processing',

@@ -47,6 +47,9 @@ importers:
       '@onereal/messaging':
         specifier: workspace:*
         version: link:../../modules/messaging
+      '@onereal/payments':
+        specifier: workspace:*
+        version: link:../../modules/payments
       '@onereal/portfolio':
         specifier: workspace:*
         version: link:../../modules/portfolio
@@ -160,6 +163,9 @@ importers:
       '@onereal/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@onereal/payments':
+        specifier: workspace:*
+        version: link:../payments
       '@onereal/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -280,6 +286,9 @@ importers:
 
   modules/payments:
     dependencies:
+      '@onereal/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@onereal/database':
         specifier: workspace:*
         version: link:../../packages/database

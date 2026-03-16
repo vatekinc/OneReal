@@ -11,6 +11,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@onereal/auth": "workspace:*",
     "@onereal/database": "workspace:*",
     "@onereal/types": "workspace:*",
     "stripe": "^17.0.0"

@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@onereal/database": "workspace:*",
+    "@onereal/payments": "workspace:*",
     "@onereal/types": "workspace:*"
   },
   "peerDependencies": {
