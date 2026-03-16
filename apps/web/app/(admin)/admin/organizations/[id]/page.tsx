@@ -192,6 +192,49 @@ export default function AdminOrgDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Billing */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-sm font-medium">Billing</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Subscription</span>
+            <Badge variant={
+              (org as any).subscription_status === 'active' ? 'default'
+              : (org as any).subscription_status === 'past_due' ? 'destructive'
+              : 'secondary'
+            }>
+              {(org as any).subscription_status || 'none'}
+            </Badge>
+          </div>
+          {(org as any).subscription_period && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Period</span>
+              <span className="text-sm">{(org as any).subscription_period}</span>
+            </div>
+          )}
+          {(org as any).subscription_current_period_end && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Next Billing</span>
+              <span className="text-sm">
+                {new Date((org as any).subscription_current_period_end).toLocaleDateString()}
+              </span>
+            </div>
+          )}
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Stripe Connect</span>
+            <Badge variant={
+              (org as any).stripe_account_status === 'active' ? 'default'
+              : (org as any).stripe_account_status === 'restricted' ? 'destructive'
+              : 'secondary'
+            }>
+              {(org as any).stripe_account_status || 'not_connected'}
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Tabs */}
       <Tabs defaultValue="members">
         <TabsList>

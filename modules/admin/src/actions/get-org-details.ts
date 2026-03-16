@@ -14,7 +14,7 @@ export async function getOrgDetails(
     // Fetch organization
     const { data: org, error: orgError } = await db
       .from('organizations')
-      .select('id, name, slug, type, created_at, settings, plans(id, name, slug, max_properties, features)')
+      .select('id, name, slug, type, created_at, settings, stripe_account_status, subscription_status, subscription_period, subscription_current_period_end, plans(id, name, slug, max_properties, features)')
       .eq('id', orgId)
       .single();
 
@@ -63,6 +63,10 @@ export async function getOrgDetails(
         type: org.type,
         created_at: org.created_at,
         settings: (org as any).settings ?? {},
+        stripe_account_status: (org as any).stripe_account_status ?? 'not_connected',
+        subscription_status: (org as any).subscription_status ?? 'none',
+        subscription_period: (org as any).subscription_period ?? null,
+        subscription_current_period_end: (org as any).subscription_current_period_end ?? null,
         plan: {
           id: (org as any).plans?.id ?? '',
           name: (org as any).plans?.name ?? 'Unknown',
@@ -70,7 +74,7 @@ export async function getOrgDetails(
           max_properties: (org as any).plans?.max_properties ?? 0,
           features: (org as any).plans?.features ?? { online_payments: false, messaging: false },
         },
-      },
+      } as any,
       properties,
       stats: {
         member_count: memberCount ?? 0,
