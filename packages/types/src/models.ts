@@ -283,3 +283,159 @@ export interface Payment {
   expense_id: string | null;
   created_at: string;
 }
+
+export interface MaintenanceRequest {
+  id: string;
+  org_id: string;
+  unit_id: string;
+  reported_by: string;
+  assigned_to: string | null;
+  title: string;
+  description: string | null;
+  priority: 'low' | 'medium' | 'high' | 'emergency';
+  status: 'open' | 'in_progress' | 'waiting_parts' | 'completed' | 'closed';
+  category: 'plumbing' | 'electrical' | 'hvac' | 'appliance' | 'structural' | 'pest' | 'other';
+  images: unknown[];
+  estimated_cost: number | null;
+  actual_cost: number | null;
+  scheduled_date: string | null;
+  completed_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Conversation {
+  id: string;
+  org_id: string;
+  property_id: string | null;
+  unit_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConversationParticipant {
+  id: string;
+  conversation_id: string;
+  user_id: string;
+  last_read_at: string;
+  created_at: string;
+}
+
+export interface Message {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
+}
+
+export interface ProfitAndLossReport {
+  income_categories: Array<{ category: string; amount: number }>;
+  total_income: number;
+  expense_categories: Array<{ category: string; amount: number }>;
+  total_expenses: number;
+  net_income: number;
+}
+
+export interface CashFlowPoint {
+  month: string;
+  income: number;
+  expenses: number;
+  net: number;
+  cumulative: number;
+}
+
+export interface AgingBucket {
+  bucket: string;
+  count: number;
+  total_amount: number;
+  total_outstanding: number;
+}
+
+export interface CollectionRatePoint {
+  month: string;
+  invoiced_amount: number;
+  collected_amount: number;
+  collection_rate: number;
+}
+
+// --- Admin types ---
+
+export interface PlatformStats {
+  total_organizations: number;
+  total_users: number;
+  total_properties: number;
+  total_units: number;
+  recent_signups: Array<{
+    id: string;
+    email: string | null;
+    first_name: string | null;
+    last_name: string | null;
+    created_at: string;
+  }>;
+  recent_organizations: Array<{
+    id: string;
+    name: string;
+    type: string;
+    created_at: string;
+    member_count: number;
+  }>;
+}
+
+export interface OrganizationListItem {
+  id: string;
+  name: string;
+  slug: string;
+  type: string;
+  created_at: string;
+  member_count: number;
+  property_count: number;
+}
+
+export interface UserListItem {
+  id: string;
+  email: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+  is_platform_admin: boolean;
+  banned: boolean;
+  created_at: string;
+  org_count: number;
+  primary_role: string | null;
+}
+
+export interface OrgDetail {
+  organization: {
+    id: string;
+    name: string;
+    slug: string;
+    type: string;
+    created_at: string;
+    settings: Record<string, unknown>;
+  };
+  members: Array<{
+    user_id: string;
+    email: string | null;
+    first_name: string | null;
+    last_name: string | null;
+    role: string;
+    status: string;
+    joined_at: string | null;
+  }>;
+  properties: Array<{
+    id: string;
+    name: string;
+    type: string;
+    status: string;
+    city: string | null;
+    state: string | null;
+    unit_count: number;
+  }>;
+  stats: {
+    member_count: number;
+    property_count: number;
+    unit_count: number;
+    occupied_units: number;
+  };
+}
