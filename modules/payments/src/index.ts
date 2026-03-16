@@ -4,3 +4,5 @@ export { createCheckoutSession } from './actions/create-checkout-session';
 export { createConnectAccount } from './actions/create-connect-account';
 export { createPortalSession } from './actions/create-portal-session';
 export { getConnectStatus } from './actions/get-connect-status';
+export { useConnectStatus } from './hooks/use-connect-status';
+export { useSubscriptionStatus } from './hooks/use-subscription-status';
