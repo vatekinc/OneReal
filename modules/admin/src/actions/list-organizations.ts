@@ -38,7 +38,7 @@ export async function listOrganizations(
     // Get page of orgs with member + property counts
     let query = db
       .from('organizations')
-      .select('id, name, slug, type, created_at, org_members(count), properties(count)')
+      .select('id, name, slug, type, created_at, org_members(count), properties(count), plans(name)')
       .order('created_at', { ascending: false })
       .range(offset, offset + pageSize - 1);
 
@@ -57,6 +57,7 @@ export async function listOrganizations(
       created_at: o.created_at,
       member_count: o.org_members?.[0]?.count ?? 0,
       property_count: o.properties?.[0]?.count ?? 0,
+      plan_name: (o as any).plans?.name ?? 'Unknown',
     }));
 
     return { success: true, data: { items, total: count ?? 0 } };

@@ -14,7 +14,7 @@ export async function getOrgDetails(
     // Fetch organization
     const { data: org, error: orgError } = await db
       .from('organizations')
-      .select('id, name, slug, type, created_at, settings')
+      .select('id, name, slug, type, created_at, settings, plans(id, name, slug, max_properties, features)')
       .eq('id', orgId)
       .single();
 
@@ -22,22 +22,11 @@ export async function getOrgDetails(
       return { success: false, error: 'Organization not found' };
     }
 
-    // Fetch members with profile info
-    const { data: membersRaw } = await db
+    // Count members (loaded separately via listOrgMembers)
+    const { count: memberCount } = await db
       .from('org_members')
-      .select('user_id, role, status, joined_at, profiles(email, first_name, last_name)')
-      .eq('org_id', orgId)
-      .order('joined_at', { ascending: false });
-
-    const members = (membersRaw ?? []).map((m: any) => ({
-      user_id: m.user_id,
-      email: m.profiles?.email ?? null,
-      first_name: m.profiles?.first_name ?? null,
-      last_name: m.profiles?.last_name ?? null,
-      role: m.role,
-      status: m.status,
-      joined_at: m.joined_at,
-    }));
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', orgId);
 
     // Fetch properties with unit counts
     const { data: propsRaw } = await db
@@ -74,11 +63,17 @@ export async function getOrgDetails(
         type: org.type,
         created_at: org.created_at,
         settings: (org as any).settings ?? {},
+        plan: {
+          id: (org as any).plans?.id ?? '',
+          name: (org as any).plans?.name ?? 'Unknown',
+          slug: (org as any).plans?.slug ?? '',
+          max_properties: (org as any).plans?.max_properties ?? 0,
+          features: (org as any).plans?.features ?? { online_payments: false, messaging: false },
+        },
       },
-      members,
       properties,
       stats: {
-        member_count: members.length,
+        member_count: memberCount ?? 0,
         property_count: properties.length,
         unit_count: totalUnits,
         occupied_units: occupiedCount ?? 0,
