@@ -10,6 +10,8 @@ interface UpdatePlanData {
   max_properties?: number;
   features?: PlanFeatures;
   is_default?: boolean;
+  monthly_price?: number;
+  yearly_price?: number;
 }
 
 export async function updatePlan(
@@ -33,6 +35,8 @@ export async function updatePlan(
     if (data.max_properties !== undefined) updates.max_properties = data.max_properties;
     if (data.features !== undefined) updates.features = data.features;
     if (data.is_default !== undefined) updates.is_default = data.is_default;
+    if (data.monthly_price !== undefined) updates.monthly_price = data.monthly_price;
+    if (data.yearly_price !== undefined) updates.yearly_price = data.yearly_price;
 
     const { data: plan, error } = await db
       .from('plans')
@@ -47,6 +51,10 @@ export async function updatePlan(
       }
       throw error;
     }
+
+    // Re-sync to Stripe if pricing might have changed
+    const { syncStripePlan } = await import('./sync-stripe-plan');
+    await syncStripePlan(planId);
 
     return { success: true, data: plan as any };
   } catch (e: any) {
