@@ -52,11 +52,11 @@ export async function middleware(request: NextRequest) {
   }
 
   // Fetch profile (shared by onboarding check and role-based routing)
-  let profile: { first_name: string | null; default_org_id: string | null } | null = null;
+  let profile: { first_name: string | null; default_org_id: string | null; is_platform_admin: boolean | null } | null = null;
   if (user && !isPublicPath) {
     const { data } = await supabase
       .from('profiles')
-      .select('first_name, default_org_id')
+      .select('first_name, default_org_id, is_platform_admin')
       .eq('id', user.id)
       .single();
     profile = data;
@@ -67,6 +67,16 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = '/onboarding';
     return NextResponse.redirect(url);
+  }
+
+  // Admin route guard
+  const isAdminRoute = pathname.startsWith('/admin');
+  if (isAdminRoute && user) {
+    if (!profile?.is_platform_admin) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+    // Platform admin accessing /admin — allow through, skip tenant routing
+    return supabaseResponse;
   }
 
   // Role-based tenant routing
