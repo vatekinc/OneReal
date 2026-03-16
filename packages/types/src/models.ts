@@ -6,6 +6,13 @@ export interface Organization {
   logo_url: string | null;
   settings: Record<string, unknown>;
   plan_id: string;
+  stripe_customer_id: string | null;
+  stripe_account_id: string | null;
+  stripe_account_status: 'not_connected' | 'onboarding' | 'active' | 'restricted';
+  stripe_subscription_id: string | null;
+  subscription_status: 'none' | 'active' | 'past_due' | 'canceled' | 'trialing';
+  subscription_period: 'monthly' | 'yearly' | null;
+  subscription_current_period_end: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -254,7 +261,7 @@ export interface Invoice {
   org_id: string;
   invoice_number: string;
   direction: 'receivable' | 'payable';
-  status: 'draft' | 'open' | 'partially_paid' | 'paid' | 'void';
+  status: 'draft' | 'open' | 'processing' | 'partially_paid' | 'paid' | 'void';
   lease_id: string | null;
   tenant_id: string | null;
   provider_id: string | null;
@@ -267,6 +274,9 @@ export interface Invoice {
   issued_date: string;
   lease_charge_id: string | null;
   late_fee_for_invoice_id: string | null;
+  stripe_checkout_session_id: string | null;
+  stripe_payment_intent_id: string | null;
+  convenience_fee: number;
   created_at: string;
   updated_at: string;
 }
@@ -282,6 +292,16 @@ export interface Payment {
   notes: string | null;
   income_id: string | null;
   expense_id: string | null;
+  created_at: string;
+}
+
+export interface PaymentEvent {
+  id: string;
+  stripe_event_id: string;
+  event_type: string;
+  payload: Record<string, unknown>;
+  processed_at: string | null;
+  error: string | null;
   created_at: string;
 }
 
@@ -374,6 +394,11 @@ export interface Plan {
   max_properties: number; // 0 = unlimited
   features: PlanFeatures;
   is_default: boolean;
+  monthly_price: number;
+  yearly_price: number;
+  stripe_product_id: string | null;
+  stripe_monthly_price_id: string | null;
+  stripe_yearly_price_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -385,6 +410,8 @@ export interface PlanListItem {
   max_properties: number;
   features: PlanFeatures;
   is_default: boolean;
+  monthly_price: number;
+  yearly_price: number;
   org_count: number;
 }
 
