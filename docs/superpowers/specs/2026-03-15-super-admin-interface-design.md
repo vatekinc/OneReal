@@ -94,7 +94,7 @@ If pathname starts with '/admin':
   3. If not platform admin → redirect to '/'
 ```
 
-This keeps the check server-side and prevents non-admins from even loading admin pages.
+This keeps the check server-side and prevents non-admins from even loading admin pages. The middleware already fetches `first_name, default_org_id` from profiles — extend this existing query to include `is_platform_admin` rather than adding a second query.
 
 ### Data Access: Service Role Client
 
@@ -221,7 +221,7 @@ interface OrgDetail {
     slug: string;
     type: string;
     created_at: string;
-    settings: any;
+    settings: Record<string, unknown>;
   };
   members: Array<{
     user_id: string;
@@ -253,22 +253,23 @@ interface OrgDetail {
 #### `toggleUserStatus(userId, disabled)`
 Disables or enables a user account. This uses the Supabase Admin API (`auth.admin.updateUserById`) to ban/unban the auth user. A banned user cannot log in.
 
+**Guard:** Prevent self-disable — if `userId === currentUser.id`, return error. This prevents the only admin from locking themselves out.
+
 #### `deleteOrganization(orgId)`
 Deletes an organization and all associated data. Uses cascading deletes (foreign key constraints handle this). Requires confirmation in the UI (double-confirm dialog).
 
-**Steps:**
-1. Delete all org_members for the org
-2. Delete all properties (cascades to units, property_images)
-3. Delete all leases, invoices, income, expenses for the org
-4. Delete the organization itself
+**Implementation note:** The database has `ON DELETE CASCADE` on foreign keys, so deleting the organization row cascades to org_members, properties, units, leases, invoices, etc. The implementation only needs a single `DELETE FROM organizations WHERE id = ?`.
 
 #### `deleteUser(userId)`
 Deletes a user profile and their auth account.
 
+**Guard:** Prevent self-delete — if `userId === currentUser.id`, return error.
+
 **Steps:**
-1. Remove from all org_members
-2. Delete profile
-3. Delete auth user via `auth.admin.deleteUser(userId)`
+1. If user has a personal org where they're the sole member, delete that org (cascades)
+2. Remove from all org_members
+3. Delete profile
+4. Delete auth user via `auth.admin.deleteUser(userId)`
 
 ---
 
