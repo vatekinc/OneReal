@@ -64,6 +64,7 @@ export default function AdminOrganizationsPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Type</TableHead>
+                  <TableHead>Plan</TableHead>
                   <TableHead>Members</TableHead>
                   <TableHead>Properties</TableHead>
                   <TableHead>Created</TableHead>
@@ -76,6 +77,9 @@ export default function AdminOrganizationsPage() {
                     <TableCell className="font-medium">{org.name}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">{org.type}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{org.plan_name}</Badge>
                     </TableCell>
                     <TableCell>{org.member_count}</TableCell>
                     <TableCell>{org.property_count}</TableCell>

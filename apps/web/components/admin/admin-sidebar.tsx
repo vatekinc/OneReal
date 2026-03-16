@@ -3,11 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@onereal/ui';
-import { LayoutDashboard, Building2, Users, ArrowLeft } from 'lucide-react';
+import { LayoutDashboard, Building2, CreditCard, Users, ArrowLeft } from 'lucide-react';
 
 const adminNavItems = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { label: 'Organizations', href: '/admin/organizations', icon: Building2 },
+  { label: 'Plans', href: '/admin/plans', icon: CreditCard },
   { label: 'Users', href: '/admin/users', icon: Users },
 ];
 

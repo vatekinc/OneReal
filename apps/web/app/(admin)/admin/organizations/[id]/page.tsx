@@ -1,19 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getOrgDetails } from '@onereal/admin/actions/get-org-details';
+import { listOrgMembers } from '@onereal/admin/actions/list-org-members';
+import { listPlans } from '@onereal/admin/actions/list-plans';
+import { updateOrgPlan } from '@onereal/admin/actions/update-org-plan';
 import { deleteOrganization } from '@onereal/admin/actions/delete-organization';
 import {
   Card, CardContent, CardHeader, CardTitle,
-  Badge, Button, Tabs, TabsContent, TabsList, TabsTrigger,
+  Badge, Button, Input, Tabs, TabsContent, TabsList, TabsTrigger,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@onereal/ui';
 import { ArrowLeft, Building2, Users, Home, DoorOpen } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
-import type { OrgDetail } from '@onereal/types';
+import type { OrgDetail, OrgMemberListItem, PlanListItem } from '@onereal/types';
 
 export default function AdminOrgDetailPage() {
   const params = useParams();
@@ -24,12 +28,67 @@ export default function AdminOrgDetailPage() {
   const [loading, setLoading] = useState(true);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
+  // Members pagination state
+  const [members, setMembers] = useState<OrgMemberListItem[]>([]);
+  const [membersTotal, setMembersTotal] = useState(0);
+  const [membersPage, setMembersPage] = useState(1);
+  const [membersSearch, setMembersSearch] = useState('');
+  const [membersLoading, setMembersLoading] = useState(true);
+  const membersPageSize = 20;
+
+  // Plans state
+  const [allPlans, setAllPlans] = useState<PlanListItem[]>([]);
+  const [changingPlan, setChangingPlan] = useState(false);
+
   useEffect(() => {
     getOrgDetails(orgId).then((result) => {
       if (result.success) setData(result.data);
       setLoading(false);
     });
   }, [orgId]);
+
+  useEffect(() => {
+    listPlans().then((result) => {
+      if (result.success) setAllPlans(result.data);
+    });
+  }, []);
+
+  const fetchMembers = useCallback(async () => {
+    setMembersLoading(true);
+    const result = await listOrgMembers(orgId, {
+      search: membersSearch || undefined,
+      page: membersPage,
+      pageSize: membersPageSize,
+    });
+    if (result.success) {
+      setMembers(result.data.items);
+      setMembersTotal(result.data.total);
+    }
+    setMembersLoading(false);
+  }, [orgId, membersSearch, membersPage]);
+
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setMembersPage(1);
+  }, [membersSearch]);
+
+  async function handlePlanChange(newPlanId: string) {
+    if (!data || newPlanId === data.organization.plan.id) return;
+    setChangingPlan(true);
+    const result = await updateOrgPlan(orgId, newPlanId);
+    if (result.success) {
+      toast.success('Plan updated');
+      const refreshed = await getOrgDetails(orgId);
+      if (refreshed.success) setData(refreshed.data);
+    } else {
+      toast.error(result.error);
+    }
+    setChangingPlan(false);
+  }
 
   async function handleDelete() {
     const result = await deleteOrganization(orgId);
@@ -44,7 +103,7 @@ export default function AdminOrgDetailPage() {
   if (loading) return <p className="text-sm text-muted-foreground">Loading...</p>;
   if (!data) return <p className="text-sm text-destructive">Organization not found.</p>;
 
-  const { organization: org, members, properties, stats } = data;
+  const { organization: org, properties, stats } = data;
   const occupancyRate = stats.unit_count > 0
     ? Math.round((stats.occupied_units / stats.unit_count) * 100)
     : 0;
@@ -55,6 +114,8 @@ export default function AdminOrgDetailPage() {
     { label: 'Units', value: stats.unit_count, icon: Home },
     { label: 'Occupancy', value: `${occupancyRate}%`, icon: DoorOpen },
   ];
+
+  const membersTotalPages = Math.ceil(membersTotal / membersPageSize);
 
   return (
     <div className="space-y-6">
@@ -96,51 +157,123 @@ export default function AdminOrgDetailPage() {
         })}
       </div>
 
+      {/* Plan */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-sm font-medium">Plan</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <p className="text-lg font-semibold">{org.plan.name}</p>
+              <p className="text-sm text-muted-foreground">
+                {org.plan.max_properties === 0
+                  ? 'Unlimited properties'
+                  : `${stats.property_count} of ${org.plan.max_properties} properties`}
+              </p>
+            </div>
+            <Select
+              value={org.plan.id}
+              onValueChange={handlePlanChange}
+              disabled={changingPlan}
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {allPlans.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Tabs */}
       <Tabs defaultValue="members">
         <TabsList>
-          <TabsTrigger value="members">Members ({members.length})</TabsTrigger>
+          <TabsTrigger value="members">Members ({stats.member_count})</TabsTrigger>
           <TabsTrigger value="properties">Properties ({properties.length})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="members" className="mt-4">
-          <div className="rounded-lg border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {members.map((m) => (
-                  <TableRow key={m.user_id}>
-                    <TableCell className="font-medium">
-                      {m.first_name} {m.last_name}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{m.email}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{m.role}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={m.status === 'active' ? 'default' : 'secondary'}>
-                        {m.status}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {members.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground">
-                      No members
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+        <TabsContent value="members" className="mt-4 space-y-4">
+          <Input
+            placeholder="Search members..."
+            value={membersSearch}
+            onChange={(e) => setMembersSearch(e.target.value)}
+            className="max-w-xs"
+          />
+
+          {membersLoading ? (
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          ) : members.length === 0 ? (
+            <div className="rounded-lg border bg-card p-12 text-center">
+              <p className="text-muted-foreground">No members found</p>
+            </div>
+          ) : (
+            <>
+              <div className="rounded-lg border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {members.map((m) => (
+                      <TableRow key={m.user_id}>
+                        <TableCell className="font-medium">
+                          {m.first_name} {m.last_name}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{m.email}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{m.role}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={m.status === 'active' ? 'default' : 'secondary'}>
+                            {m.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination */}
+              {membersTotalPages > 1 && (
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {(membersPage - 1) * membersPageSize + 1}–{Math.min(membersPage * membersPageSize, membersTotal)} of {membersTotal}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setMembersPage(membersPage - 1)}
+                      disabled={membersPage <= 1}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setMembersPage(membersPage + 1)}
+                      disabled={membersPage >= membersTotalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="properties" className="mt-4">
