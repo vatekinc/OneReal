@@ -80,6 +80,9 @@ importers:
       next:
         specifier: ^15.0.0
         version: 15.5.12(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      plaid:
+        specifier: ^41.4.0
+        version: 41.4.0
       react:
         specifier: ^19.0.0
         version: 19.2.4
@@ -89,6 +92,9 @@ importers:
       react-hook-form:
         specifier: ^7.53.0
         version: 7.71.2(react@19.2.4)
+      react-plaid-link:
+        specifier: ^4.1.1
+        version: 4.1.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       recharts:
         specifier: ^3.8.0
         version: 3.8.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react-is@19.2.4)(react@19.2.4)(redux@5.0.1)
