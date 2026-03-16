@@ -38,10 +38,19 @@ Parameters:
 Returns: ActionResult<{ items: OrgMemberListItem[], total: number }>
 
 Query:
-  - Count: org_members WHERE org_id = orgId, with optional search filter
+  - Count: org_members WHERE org_id = orgId, with optional search filter on joined profiles
   - Data: org_members JOIN profiles, paginated with range(offset, offset+pageSize-1)
-  - Search: ilike on profiles.email, profiles.first_name, profiles.last_name
+  - Search: .or() filter on profiles.email, profiles.first_name, profiles.last_name (ilike)
+  - Order: joined_at DESC (newest first, matches current behavior)
 ```
+
+### `getOrgDetails` member_count change
+
+After removing the members fetch, `stats.member_count` is computed via a count query:
+```
+db.from('org_members').select('id', { count: 'exact', head: true }).eq('org_id', orgId)
+```
+This replaces the current `members.length` computation.
 
 ### Type: `OrgMemberListItem`
 
@@ -78,10 +87,11 @@ interface OrgDetail {
 
 ### UI behavior
 
-- Members tab label: `Members ({stats.member_count})`
-- Search input above table, debounced
+- Members tab label: always shows total org members `Members ({stats.member_count})` — not filtered count
+- `listOrgMembers` fires on component mount (members is the default tab)
+- Search input above table (useState + useCallback + useEffect, same pattern as orgs/users list pages)
 - Table columns: Name, Email, Role, Status (unchanged)
-- Pagination: `Showing 1–20 of 92` with Previous/Next buttons
+- Pagination: `Showing 1–20 of {filtered total}` with Previous/Next buttons
 - Search resets to page 1
 - View-only — no admin actions on members (org admins manage their own members)
 
