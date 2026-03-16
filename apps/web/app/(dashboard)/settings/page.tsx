@@ -16,6 +16,7 @@ import { createConnectAccount } from '@onereal/payments/actions/create-connect-a
 import { createPortalSession } from '@onereal/payments/actions/create-portal-session';
 import { getConnectStatus } from '@onereal/payments/actions/get-connect-status';
 import { useSearchParams } from 'next/navigation';
+import { PlaidLinkButton } from '../../../components/payments/plaid-link-button';
 
 export default function OrgSettingsPage() {
   return (
@@ -38,6 +39,8 @@ function OrgSettingsContent() {
   const [connectStatus, setConnectStatus] = useState<'not_connected' | 'onboarding' | 'active' | 'restricted'>('not_connected');
   const [connectLoading, setConnectLoading] = useState(false);
   const [paidPlan, setPaidPlan] = useState<any>(null);
+  const [plaidStatus, setPlaidStatus] = useState<'not_connected' | 'active'>('not_connected');
+  const [plaidBank, setPlaidBank] = useState<{ institution: string; mask: string } | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createClient() as unknown as SupabaseClient<Database>;
 
@@ -71,7 +74,22 @@ function OrgSettingsContent() {
     if (!activeOrg) return;
     const fetchConnect = async () => {
       const result = await getConnectStatus(activeOrg.id);
-      if (result.success) setConnectStatus(result.data.stripe_account_status);
+      if (result.success) {
+        setConnectStatus(result.data.stripe_account_status);
+        setPlaidStatus(result.data.plaid_status);
+      }
+      // Also fetch Plaid bank details
+      const { data: orgPlaid } = await (supabase as any)
+        .from('organizations')
+        .select('plaid_institution_name, plaid_account_mask')
+        .eq('id', activeOrg.id)
+        .single();
+      if (orgPlaid?.plaid_institution_name) {
+        setPlaidBank({
+          institution: orgPlaid.plaid_institution_name,
+          mask: orgPlaid.plaid_account_mask || '****',
+        });
+      }
     };
     fetchConnect();
 
@@ -277,6 +295,48 @@ function OrgSettingsContent() {
                   ? 'Complete Stripe Setup'
                   : 'Update Stripe Account'}
               </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Plaid Bank Account section */}
+      {plan?.features?.online_payments && (
+        <Card>
+          <CardHeader><CardTitle>Plaid Bank Account</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Connect your bank account to receive ACH payments at lower fees ($1 flat vs Stripe&apos;s 0.8%).
+            </p>
+            {plaidStatus === 'active' && plaidBank ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">
+                    {plaidBank.institution} ****{plaidBank.mask}
+                  </span>
+                  <Badge variant="default">Connected</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  ACH payments from tenants will be deposited directly to this account.
+                </p>
+                <PlaidLinkButton
+                  role="landlord"
+                  orgId={activeOrg.id}
+                  onSuccess={() => window.location.reload()}
+                  variant="outline"
+                  size="sm"
+                >
+                  Change Bank Account
+                </PlaidLinkButton>
+              </>
+            ) : (
+              <PlaidLinkButton
+                role="landlord"
+                orgId={activeOrg.id}
+                onSuccess={() => window.location.reload()}
+              >
+                Link Bank Account
+              </PlaidLinkButton>
             )}
           </CardContent>
         </Card>
