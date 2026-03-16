@@ -60,10 +60,19 @@ export async function createCompanyOrg(
   name: string,
   slug: string
 ) {
+  // Fetch default plan
+  const { data: defaultPlan } = await (client as any)
+    .from('plans')
+    .select('id')
+    .eq('is_default', true)
+    .single();
+
+  if (!defaultPlan) throw new Error('No default plan configured');
+
   // Create org
   const { data: orgData, error: orgError } = await client
     .from('organizations')
-    .insert({ name, slug, type: 'company' })
+    .insert({ name, slug, type: 'company', plan_id: (defaultPlan as any).id } as any)
     .select()
     .single();
 

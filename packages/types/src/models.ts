@@ -5,6 +5,7 @@ export interface Organization {
   type: string;
   logo_url: string | null;
   settings: Record<string, unknown>;
+  plan_id: string;
   created_at: string;
   updated_at: string;
 }
@@ -359,6 +360,34 @@ export interface CollectionRatePoint {
   collection_rate: number;
 }
 
+// --- Plan types ---
+
+export interface PlanFeatures {
+  online_payments: boolean;
+  messaging: boolean;
+}
+
+export interface Plan {
+  id: string;
+  name: string;
+  slug: string;
+  max_properties: number; // 0 = unlimited
+  features: PlanFeatures;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlanListItem {
+  id: string;
+  name: string;
+  slug: string;
+  max_properties: number;
+  features: PlanFeatures;
+  is_default: boolean;
+  org_count: number;
+}
+
 // --- Admin types ---
 
 export interface PlatformStats {
@@ -390,6 +419,7 @@ export interface OrganizationListItem {
   created_at: string;
   member_count: number;
   property_count: number;
+  plan_name: string;
 }
 
 export interface UserListItem {
@@ -405,6 +435,16 @@ export interface UserListItem {
   primary_role: string | null;
 }
 
+export interface OrgMemberListItem {
+  user_id: string;
+  email: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  role: string;
+  status: string;
+  joined_at: string | null;
+}
+
 export interface OrgDetail {
   organization: {
     id: string;
@@ -413,16 +453,14 @@ export interface OrgDetail {
     type: string;
     created_at: string;
     settings: Record<string, unknown>;
+    plan: {
+      id: string;
+      name: string;
+      slug: string;
+      max_properties: number;
+      features: PlanFeatures;
+    };
   };
-  members: Array<{
-    user_id: string;
-    email: string | null;
-    first_name: string | null;
-    last_name: string | null;
-    role: string;
-    status: string;
-    joined_at: string | null;
-  }>;
   properties: Array<{
     id: string;
     name: string;

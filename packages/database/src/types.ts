@@ -20,6 +20,7 @@ export type Database = {
           type: string;
           logo_url: string | null;
           settings: Json;
+          plan_id: string;
           created_at: string;
           updated_at: string;
         };
@@ -30,6 +31,7 @@ export type Database = {
           type: string;
           logo_url?: string | null;
           settings?: Json;
+          plan_id: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -40,10 +42,19 @@ export type Database = {
           type?: string;
           logo_url?: string | null;
           settings?: Json;
+          plan_id?: string;
           created_at?: string;
           updated_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'organizations_plan_id_fkey';
+            columns: ['plan_id'];
+            isOneToOne: false;
+            referencedRelation: 'plans';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       profiles: {
         Row: {
@@ -484,6 +495,39 @@ export type Database = {
           actual_cost?: number | null;
           scheduled_date?: string | null;
           completed_date?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      plans: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string;
+          max_properties: number;
+          features: Json;
+          is_default: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          slug: string;
+          max_properties?: number;
+          features?: Json;
+          is_default?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          slug?: string;
+          max_properties?: number;
+          features?: Json;
+          is_default?: boolean;
           created_at?: string;
           updated_at?: string;
         };
