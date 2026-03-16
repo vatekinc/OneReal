@@ -1,8 +1,15 @@
 export { getStripe } from './lib/stripe';
+export { getPlaidClient } from './lib/plaid';
 export { calculateConvenienceFee } from './lib/fees';
+export { encryptPlaidToken, decryptPlaidToken } from './lib/plaid-crypto';
 export { createCheckoutSession } from './actions/create-checkout-session';
 export { createConnectAccount } from './actions/create-connect-account';
 export { createPortalSession } from './actions/create-portal-session';
 export { getConnectStatus } from './actions/get-connect-status';
+export { createPlaidLinkToken } from './actions/create-plaid-link-token';
+export { exchangePlaidToken } from './actions/exchange-plaid-token';
+export { initiatePlaidTransfer } from './actions/initiate-plaid-transfer';
+export { getTenantBankAccount, toggleAutoPay } from './actions/get-tenant-bank-account';
 export { useConnectStatus } from './hooks/use-connect-status';
 export { useSubscriptionStatus } from './hooks/use-subscription-status';
+export { useTenantBank } from './hooks/use-tenant-bank';

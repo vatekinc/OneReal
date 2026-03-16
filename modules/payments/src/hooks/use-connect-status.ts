@@ -5,6 +5,7 @@ import { getConnectStatus } from '../actions/get-connect-status';
 
 export function useConnectStatus(orgId: string | null, pollOnMount = false) {
   const [status, setStatus] = useState<'not_connected' | 'onboarding' | 'active' | 'restricted'>('not_connected');
+  const [plaidStatus, setPlaidStatus] = useState<'not_connected' | 'active'>('not_connected');
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
@@ -12,6 +13,7 @@ export function useConnectStatus(orgId: string | null, pollOnMount = false) {
     const result = await getConnectStatus(orgId);
     if (result.success) {
       setStatus(result.data.stripe_account_status);
+      setPlaidStatus(result.data.plaid_status);
     }
     setLoading(false);
   }, [orgId]);
@@ -29,5 +31,5 @@ export function useConnectStatus(orgId: string | null, pollOnMount = false) {
     }
   }, [refresh, pollOnMount]);
 
-  return { status, loading, refresh };
+  return { status, plaidStatus, loading, refresh };
 }

@@ -7,6 +7,7 @@ import type { ActionResult } from '@onereal/types';
 interface ConnectStatus {
   stripe_account_status: 'not_connected' | 'onboarding' | 'active' | 'restricted';
   stripe_account_id: string | null;
+  plaid_status: 'not_connected' | 'active';
 }
 
 export async function getConnectStatus(
@@ -19,7 +20,7 @@ export async function getConnectStatus(
 
     const { data: org } = await (supabase as any)
       .from('organizations')
-      .select('stripe_account_id, stripe_account_status')
+      .select('stripe_account_id, stripe_account_status, plaid_status')
       .eq('id', orgId)
       .single();
 
@@ -48,7 +49,7 @@ export async function getConnectStatus(
 
         return {
           success: true,
-          data: { stripe_account_status: liveStatus, stripe_account_id: accountId },
+          data: { stripe_account_status: liveStatus, stripe_account_id: accountId, plaid_status: (org as any).plaid_status || 'not_connected' },
         };
       } catch {
         // Fall through to stored status if Stripe call fails
@@ -57,7 +58,7 @@ export async function getConnectStatus(
 
     return {
       success: true,
-      data: { stripe_account_status: storedStatus, stripe_account_id: accountId },
+      data: { stripe_account_status: storedStatus, stripe_account_id: accountId, plaid_status: (org as any).plaid_status || 'not_connected' },
     };
   } catch (err: any) {
     return { success: false, error: err.message ?? 'Failed to get connect status' };
