@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useUser } from '@onereal/auth';
-import { createClient, updateOrganization, getOrgMembers } from '@onereal/database';
+import { createClient, updateOrganization, getOrgMembers, getOrgPlan } from '@onereal/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@onereal/database';
 import {
@@ -17,6 +17,8 @@ export default function OrgSettingsPage() {
   const [name, setName] = useState('');
   const [members, setMembers] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
+  const [plan, setPlan] = useState<any>(null);
+  const [propertyCount, setPropertyCount] = useState(0);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createClient() as unknown as SupabaseClient<Database>;
 
@@ -24,6 +26,12 @@ export default function OrgSettingsPage() {
     if (activeOrg) {
       setName(activeOrg.name);
       getOrgMembers(supabase, activeOrg.id).then(setMembers).catch(() => {});
+      getOrgPlan(supabase as any, activeOrg.id).then((p: any) => setPlan(p)).catch(() => {});
+      (supabase as any)
+        .from('properties')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', activeOrg.id)
+        .then(({ count }: any) => setPropertyCount(count ?? 0));
     }
   }, [activeOrg, supabase]);
 
@@ -66,6 +74,30 @@ export default function OrgSettingsPage() {
           </Button>
         </CardContent>
       </Card>
+
+      {plan && (
+        <Card>
+          <CardHeader><CardTitle>Current Plan</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-semibold">{plan.name}</span>
+              <Badge variant="secondary">{plan.slug}</Badge>
+            </div>
+            <div className="text-sm text-muted-foreground space-y-1">
+              <p>
+                Properties: {propertyCount}{' '}
+                {plan.max_properties > 0 ? `of ${plan.max_properties}` : '(Unlimited)'}
+              </p>
+              <p>
+                Online Payments: {plan.features?.online_payments ? 'Enabled' : 'Not included'}
+              </p>
+              <p>
+                Messaging: {plan.features?.messaging ? 'Enabled' : 'Not included'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {activeOrg.type === 'company' && (
         <Card>

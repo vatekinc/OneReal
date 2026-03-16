@@ -22,6 +22,29 @@ export async function createProperty(
 
     const db = supabase as any;
 
+    // Check plan property limit
+    const { data: orgWithPlan } = await db
+      .from('organizations')
+      .select('plans(max_properties)')
+      .eq('id', orgId)
+      .single();
+
+    const maxProps = (orgWithPlan as any)?.plans?.max_properties ?? 0;
+    if (maxProps > 0) {
+      const { count } = await db
+        .from('properties')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', orgId);
+
+      const current = count ?? 0;
+      if (current >= maxProps) {
+        return {
+          success: false,
+          error: `Property limit reached (${current}/${maxProps}). Upgrade your plan to add more.`,
+        };
+      }
+    }
+
     const { data: property, error } = await db
       .from('properties')
       .insert({ ...parsed.data, org_id: orgId })
