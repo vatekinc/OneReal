@@ -32,10 +32,11 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isPublicPath = publicPaths.some((p) => pathname.startsWith(p));
   const isAuthCallback = pathname.startsWith('/auth/callback');
+  const isApiRoute = pathname.startsWith('/api/');
   const isOnboarding = pathname.startsWith('/onboarding');
 
-  // Allow auth callback always
-  if (isAuthCallback) return supabaseResponse;
+  // Allow auth callback and API routes always (webhooks have their own auth)
+  if (isAuthCallback || isApiRoute) return supabaseResponse;
 
   // Unauthenticated user on protected path → login
   if (!user && !isPublicPath) {
