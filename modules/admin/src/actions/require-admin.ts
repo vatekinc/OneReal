@@ -12,11 +12,13 @@ export async function requireAdmin(): Promise<string> {
     throw new Error('Not authenticated');
   }
 
-  const { data: profile } = await supabase
+  // Type assertion needed: Supabase v2.99 typed client produces `never`
+  // for select queries on manually-maintained Database types
+  const { data: profile } = (await supabase
     .from('profiles')
     .select('is_platform_admin')
     .eq('id', user.id)
-    .single();
+    .single()) as { data: { is_platform_admin: boolean } | null };
 
   if (!profile?.is_platform_admin) {
     throw new Error('Not authorized — platform admin required');
