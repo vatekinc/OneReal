@@ -28,6 +28,8 @@ export default function AdminPlansPage() {
   const [formOnlinePayments, setFormOnlinePayments] = useState(false);
   const [formMessaging, setFormMessaging] = useState(false);
   const [formIsDefault, setFormIsDefault] = useState(false);
+  const [formMonthlyPrice, setFormMonthlyPrice] = useState('');
+  const [formYearlyPrice, setFormYearlyPrice] = useState('');
   const [saving, setSaving] = useState(false);
 
   // Delete dialog state
@@ -50,6 +52,8 @@ export default function AdminPlansPage() {
     setFormOnlinePayments(false);
     setFormMessaging(false);
     setFormIsDefault(false);
+    setFormMonthlyPrice('');
+    setFormYearlyPrice('');
     setFormOpen(true);
   }
 
@@ -61,6 +65,8 @@ export default function AdminPlansPage() {
     setFormOnlinePayments(plan.features.online_payments);
     setFormMessaging(plan.features.messaging);
     setFormIsDefault(plan.is_default);
+    setFormMonthlyPrice(String(plan.monthly_price ?? 0));
+    setFormYearlyPrice(String(plan.yearly_price ?? 0));
     setFormOpen(true);
   }
 
@@ -83,6 +89,8 @@ export default function AdminPlansPage() {
         max_properties: formMaxProps,
         features,
         is_default: formIsDefault,
+        monthly_price: parseFloat(formMonthlyPrice) || 0,
+        yearly_price: parseFloat(formYearlyPrice) || 0,
       });
       if (result.success) {
         toast.success('Plan updated');
@@ -98,6 +106,8 @@ export default function AdminPlansPage() {
         max_properties: formMaxProps,
         features,
         is_default: formIsDefault,
+        monthly_price: parseFloat(formMonthlyPrice) || 0,
+        yearly_price: parseFloat(formYearlyPrice) || 0,
       });
       if (result.success) {
         toast.success('Plan created');
@@ -154,6 +164,8 @@ export default function AdminPlansPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Slug</TableHead>
                 <TableHead>Property Limit</TableHead>
+                <TableHead>Monthly</TableHead>
+                <TableHead>Yearly</TableHead>
                 <TableHead>Features</TableHead>
                 <TableHead>Organizations</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -172,6 +184,8 @@ export default function AdminPlansPage() {
                   <TableCell>
                     {plan.max_properties === 0 ? 'Unlimited' : plan.max_properties}
                   </TableCell>
+                  <TableCell>${Number(plan.monthly_price).toFixed(2)}</TableCell>
+                  <TableCell>${Number(plan.yearly_price).toFixed(2)}</TableCell>
                   <TableCell>
                     <div className="flex gap-1 flex-wrap">
                       {plan.features.online_payments && (
@@ -248,6 +262,30 @@ export default function AdminPlansPage() {
                   />
                   Messaging
                 </label>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Monthly Price ($)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={formMonthlyPrice}
+                  onChange={(e) => setFormMonthlyPrice(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Yearly Price ($)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={formYearlyPrice}
+                  onChange={(e) => setFormYearlyPrice(e.target.value)}
+                />
               </div>
             </div>
             <label className="flex items-center gap-2 text-sm">
