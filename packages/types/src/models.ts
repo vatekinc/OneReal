@@ -13,6 +13,12 @@ export interface Organization {
   subscription_status: 'none' | 'active' | 'past_due' | 'canceled' | 'trialing';
   subscription_period: 'monthly' | 'yearly' | null;
   subscription_current_period_end: string | null;
+  plaid_access_token_encrypted: string | null;
+  plaid_account_id: string | null;
+  plaid_item_id: string | null;
+  plaid_institution_name: string | null;
+  plaid_account_mask: string | null;
+  plaid_status: 'not_connected' | 'active';
   created_at: string;
   updated_at: string;
 }
@@ -277,6 +283,8 @@ export interface Invoice {
   stripe_checkout_session_id: string | null;
   stripe_payment_intent_id: string | null;
   convenience_fee: number;
+  plaid_transfer_id: string | null;
+  payment_processor: 'stripe' | 'plaid' | null;
   created_at: string;
   updated_at: string;
 }
@@ -298,11 +306,27 @@ export interface Payment {
 export interface PaymentEvent {
   id: string;
   stripe_event_id: string;
+  plaid_event_id: string | null;
   event_type: string;
   payload: Record<string, unknown>;
   processed_at: string | null;
   error: string | null;
   created_at: string;
+}
+
+export interface TenantBankAccount {
+  id: string;
+  tenant_id: string;
+  org_id: string;
+  plaid_access_token_encrypted: string;
+  plaid_account_id: string;
+  plaid_item_id: string;
+  institution_name: string;
+  account_mask: string;
+  account_name: string;
+  auto_pay_enabled: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface MaintenanceRequest {

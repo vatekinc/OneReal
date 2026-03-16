@@ -82,6 +82,7 @@ export const PaymentMethod = {
   CHECK: 'check',
   ZELLE: 'zelle',
   BANK_TRANSFER: 'bank_transfer',
+  PLAID: 'plaid',
   OTHER: 'other',
 } as const;
 export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
