@@ -1,23 +1,22 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { getProfile, getProperties } from '@onereal/database';
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '@onereal/database';
+import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query';
+import { getAuthContext } from '@/lib/auth';
+import { getProperties } from '@onereal/database';
 import { PropertiesClient } from './properties-client';
 
-type ProfileRow = Database['public']['Tables']['profiles']['Row'];
-
 export default async function PropertiesPage() {
-  const supabaseRaw = await createServerSupabaseClient();
-  const supabase = supabaseRaw as unknown as SupabaseClient<Database>;
+  const auth = await getAuthContext();
+  if (!auth) return null;
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  const queryClient = new QueryClient();
 
-  const profile = await getProfile(supabase, user.id).catch(() => null) as ProfileRow | null;
-  if (!profile?.default_org_id) return null;
+  await queryClient.prefetchQuery({
+    queryKey: ['properties', { orgId: auth.orgId }],
+    queryFn: () => getProperties(auth.supabase, { orgId: auth.orgId }),
+  });
 
-  const orgId = profile.default_org_id;
-  const initialData = await getProperties(supabase, { orgId });
-
-  return <PropertiesClient orgId={orgId} initialData={initialData} />;
+  return (
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <PropertiesClient orgId={auth.orgId} />
+    </HydrationBoundary>
+  );
 }

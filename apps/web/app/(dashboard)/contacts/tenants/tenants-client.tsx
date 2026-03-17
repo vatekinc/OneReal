@@ -16,10 +16,9 @@ import type { Tenant } from '@onereal/types';
 
 interface TenantsClientProps {
   orgId: string;
-  initialData: any[];
 }
 
-export function TenantsClient({ orgId, initialData }: TenantsClientProps) {
+export function TenantsClient({ orgId }: TenantsClientProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -32,8 +31,7 @@ export function TenantsClient({ orgId, initialData }: TenantsClientProps) {
     search: search || undefined,
   });
 
-  // Server data shows instantly; hook data takes over once fetched
-  const tenants = (tenantsData ?? (search ? [] : initialData)) as any[];
+  const tenants = (tenantsData ?? []) as any[];
 
   function getActiveLeaseCount(tenant: any) {
     return (tenant.leases ?? []).filter((l: any) => l.status === 'active').length;

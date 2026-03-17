@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { Badge, Button } from '@onereal/ui';
 import { Star, Trash2 } from 'lucide-react';
 import { deleteImage } from '@onereal/portfolio/actions/delete-image';
@@ -46,8 +47,8 @@ export function ImageGallery({ images, propertyId }: ImageGalleryProps) {
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {images.map((image) => (
-            <div key={image.id} className="group relative overflow-hidden rounded-lg border">
-              <img src={image.url} alt={image.caption || 'Property image'} className="aspect-square w-full object-cover" />
+            <div key={image.id} className="group relative aspect-square overflow-hidden rounded-lg border">
+              <Image src={image.url} alt={image.caption || 'Property image'} fill sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className="object-cover" />
               {image.is_primary && (
                 <Badge className="absolute left-2 top-2">Primary</Badge>
               )}

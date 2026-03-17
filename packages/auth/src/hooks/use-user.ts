@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { createClient, getProfile, getUserOrganizations } from '@onereal/database';
 import type { Database } from '@onereal/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -14,50 +15,39 @@ interface UserState {
   loading: boolean;
 }
 
-export function useUser() {
+export function useUser(): UserState {
   const { session, loading: sessionLoading } = useSession();
-  const [state, setState] = useState<UserState>({
-    profile: null,
-    activeOrg: null,
-    organizations: [],
-    loading: true,
-  });
   const supabase = useMemo(() => createClient(), []);
+  const userId = session?.user?.id;
 
-  useEffect(() => {
-    if (sessionLoading) return;
-    if (!session?.user) {
-      setState({ profile: null, activeOrg: null, organizations: [], loading: false });
-      return;
-    }
+  const { data, isLoading } = useQuery({
+    queryKey: ['auth-user', userId],
+    queryFn: async () => {
+      const typedClient = supabase as unknown as SupabaseClient<Database>;
+      const [profileRaw, orgs] = await Promise.all([
+        getProfile(typedClient, userId!),
+        getUserOrganizations(typedClient, userId!),
+      ]);
 
-    async function loadUser() {
-      try {
-        // Cast to the SupabaseClient<Database> that the query helpers expect
-        const typedClient = supabase as unknown as SupabaseClient<Database>;
-        const [profileRaw, orgs] = await Promise.all([
-          getProfile(typedClient, session!.user.id),
-          getUserOrganizations(typedClient, session!.user.id),
-        ]);
+      const profile = profileRaw as Profile;
+      const activeOrg = profile.default_org_id
+        ? (orgs.find((o) => o.org_id === profile.default_org_id)?.organizations as Organization) ?? null
+        : null;
 
-        const profile = profileRaw as Profile;
-        const activeOrg = profile.default_org_id
-          ? (orgs.find((o) => o.org_id === profile.default_org_id)?.organizations as Organization) ?? null
-          : null;
+      return {
+        profile,
+        activeOrg,
+        organizations: orgs as UserState['organizations'],
+      };
+    },
+    enabled: !!userId && !sessionLoading,
+    staleTime: 5 * 60 * 1000,
+  });
 
-        setState({
-          profile,
-          activeOrg,
-          organizations: orgs as UserState['organizations'],
-          loading: false,
-        });
-      } catch {
-        setState((prev) => ({ ...prev, loading: false }));
-      }
-    }
-
-    loadUser();
-  }, [session, sessionLoading, supabase]);
-
-  return state;
+  return {
+    profile: data?.profile ?? null,
+    activeOrg: data?.activeOrg ?? null,
+    organizations: data?.organizations ?? [],
+    loading: sessionLoading || (!!userId && isLoading),
+  };
 }

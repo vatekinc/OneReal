@@ -15,10 +15,9 @@ import { useQueryClient } from '@tanstack/react-query';
 
 interface PropertiesClientProps {
   orgId: string;
-  initialData: { data: any[]; count: number };
 }
 
-export function PropertiesClient({ orgId, initialData }: PropertiesClientProps) {
+export function PropertiesClient({ orgId }: PropertiesClientProps) {
   const [view, setView] = useState<'table' | 'grid'>('table');
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('');
@@ -36,8 +35,6 @@ export function PropertiesClient({ orgId, initialData }: PropertiesClientProps) 
     }
   }
 
-  const hasActiveFilters = !!(search || typeFilter || statusFilter);
-
   const { data, isLoading } = useProperties({
     orgId,
     search: search || undefined,
@@ -45,8 +42,7 @@ export function PropertiesClient({ orgId, initialData }: PropertiesClientProps) 
     status: statusFilter || undefined,
   });
 
-  // Server data shows instantly; hook data takes over once fetched
-  const properties = data?.data ?? initialData.data;
+  const properties = data?.data ?? [];
 
   return (
     <div className="space-y-4">
@@ -94,7 +90,7 @@ export function PropertiesClient({ orgId, initialData }: PropertiesClientProps) 
         </div>
       </div>
 
-      {isLoading && hasActiveFilters ? (
+      {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading...</p>
       ) : properties.length === 0 ? (
         <div className="rounded-lg border bg-card p-12 text-center">

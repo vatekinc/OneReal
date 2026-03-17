@@ -40,11 +40,9 @@ const categoryLabels: Record<string, string> = {
 
 interface MaintenanceClientProps {
   orgId: string;
-  initialRequests: any[];
-  initialProperties: any[];
 }
 
-export function MaintenanceClient({ orgId, initialRequests, initialProperties }: MaintenanceClientProps) {
+export function MaintenanceClient({ orgId }: MaintenanceClientProps) {
   const [tab, setTab] = useState<TabValue>('all');
   const [search, setSearch] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
@@ -53,7 +51,7 @@ export function MaintenanceClient({ orgId, initialRequests, initialProperties }:
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
 
   const { data: propertiesData } = useProperties({ orgId });
-  const properties = (propertiesData?.data ?? initialProperties) as any[];
+  const properties = (propertiesData?.data ?? []) as any[];
 
   const hasActiveFilters = !!(search || priorityFilter || tab !== 'all');
   const statusFilter = tab === 'all' ? undefined : tab;
@@ -64,8 +62,7 @@ export function MaintenanceClient({ orgId, initialRequests, initialProperties }:
     search: search || undefined,
   });
 
-  // Server data shows instantly; hook data takes over once fetched
-  const displayRequests = requests ?? (hasActiveFilters ? [] : initialRequests);
+  const displayRequests = requests ?? [];
 
   function handleNew() {
     setSelectedRequest(null);
