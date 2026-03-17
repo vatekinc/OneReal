@@ -2,6 +2,7 @@
 
 import { useState, memo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { cn, Button, Sheet, SheetContent, SheetTrigger, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@onereal/ui';
 import {
@@ -188,8 +189,8 @@ function SidebarContent({
   return (
     <div className="flex h-full flex-col gap-2 p-3">
       <div className={cn('flex items-center gap-2 px-3 py-2', collapsed && 'justify-center')}>
+        <Image src="/icon.png" alt="OneReal" width={28} height={28} className="rounded" />
         {!collapsed && <span className="text-lg font-bold">OneReal</span>}
-        {collapsed && <span className="text-lg font-bold">O</span>}
         {onToggle && (
           <Button
             variant="ghost"

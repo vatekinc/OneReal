@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useUser } from '@onereal/auth';
 import { createClient, updateOrganization, getOrgMembers, getOrgPlan } from '@onereal/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -47,7 +47,7 @@ function OrgSettingsContent() {
   const [plaidStatus, setPlaidStatus] = useState<'not_connected' | 'active'>('not_connected');
   const [plaidBank, setPlaidBank] = useState<{ institution: string; mask: string } | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabase = createClient() as unknown as SupabaseClient<Database>;
+  const supabase = useMemo(() => createClient() as unknown as SupabaseClient<Database>, []);
 
   useEffect(() => {
     if (activeOrg) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useUser } from '@onereal/auth';
 import { createClient, updateProfile } from '@onereal/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -18,7 +18,7 @@ export default function ProfileSettingsPage() {
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabase = createClient() as unknown as SupabaseClient<Database>;
+  const supabase = useMemo(() => createClient() as unknown as SupabaseClient<Database>, []);
 
   useEffect(() => {
     if (profile) {
