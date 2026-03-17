@@ -16,7 +16,12 @@ import { createConnectAccount } from '@onereal/payments/actions/create-connect-a
 import { createPortalSession } from '@onereal/payments/actions/create-portal-session';
 import { getConnectStatus } from '@onereal/payments/actions/get-connect-status';
 import { useSearchParams } from 'next/navigation';
-import { PlaidLinkButton } from '../../../components/payments/plaid-link-button';
+import dynamic from 'next/dynamic';
+
+const PlaidLinkButton = dynamic(
+  () => import('../../../components/payments/plaid-link-button').then((m) => ({ default: m.PlaidLinkButton })),
+  { ssr: false, loading: () => <Button variant="outline" disabled>Loading...</Button> }
+);
 
 export default function OrgSettingsPage() {
   return (

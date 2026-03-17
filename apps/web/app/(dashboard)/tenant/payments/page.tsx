@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense, useRef } from 'react';
 import { useTenantInvoices } from '@onereal/tenant-portal';
 import {
   Card, CardContent,
@@ -11,6 +11,7 @@ import {
   Switch,
 } from '@onereal/ui';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { createCheckoutSession } from '@onereal/payments/actions/create-checkout-session';
 import { initiatePlaidTransfer } from '@onereal/payments/actions/initiate-plaid-transfer';
 import { getTenantBankAccount, toggleAutoPay } from '@onereal/payments/actions/get-tenant-bank-account';
@@ -18,7 +19,12 @@ import { calculateConvenienceFee } from '@onereal/payments/lib/fees';
 import { createClient } from '@onereal/database';
 import { useSearchParams } from 'next/navigation';
 import { CreditCard, Landmark } from 'lucide-react';
-import { PlaidLinkButton } from '../../../../components/payments/plaid-link-button';
+import dynamic from 'next/dynamic';
+
+const PlaidLinkButton = dynamic(
+  () => import('../../../../components/payments/plaid-link-button').then((m) => ({ default: m.PlaidLinkButton })),
+  { ssr: false, loading: () => <Button variant="outline" disabled>Loading...</Button> }
+);
 
 const statusColors: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-800',
@@ -53,6 +59,7 @@ export default function TenantPaymentsPage() {
 
 function TenantPaymentsContent() {
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<'open' | 'paid' | 'all'>('all');
   const { data: invoices, isLoading } = useTenantInvoices(filter);
   const [onlinePayEnabled, setOnlinePayEnabled] = useState(false);
@@ -63,8 +70,8 @@ function TenantPaymentsContent() {
   // Payment method dialog state
   const [payDialog, setPayDialog] = useState<{ invoiceId: string; orgId: string; amount: number } | null>(null);
 
-  // Plaid Link state for inline bank linking during payment
-  const [showPlaidLink, setShowPlaidLink] = useState(false);
+  // Plaid Link state — stored separately so it survives dialog close
+  const [plaidLinkIntent, setPlaidLinkIntent] = useState<{ invoiceId: string; orgId: string; amount: number } | null>(null);
 
   const orgId = invoices?.[0]?.org_id || null;
 
@@ -104,18 +111,34 @@ function TenantPaymentsContent() {
     refreshTenantBank();
   }, [refreshTenantBank]);
 
+  const hasToasted = useRef(false);
   useEffect(() => {
-    if (searchParams.get('payment') === 'success') {
-      toast.success('Payment submitted successfully!');
-    } else if (searchParams.get('payment') === 'canceled') {
-      toast.info('Payment was canceled.');
+    const paymentStatus = searchParams.get('payment');
+    if (paymentStatus === 'success') {
+      if (!hasToasted.current) {
+        hasToasted.current = true;
+        toast.success('Payment submitted successfully!');
+      }
+      // Webhook may not have processed yet — poll until status updates
+      queryClient.invalidateQueries({ queryKey: ['tenant-invoices'] });
+      let attempts = 0;
+      const poll = setInterval(() => {
+        queryClient.invalidateQueries({ queryKey: ['tenant-invoices'] });
+        attempts++;
+        if (attempts >= 5) clearInterval(poll);
+      }, 2000);
+      return () => clearInterval(poll);
+    } else if (paymentStatus === 'canceled') {
+      if (!hasToasted.current) {
+        hasToasted.current = true;
+        toast.info('Payment was canceled.');
+      }
     }
-  }, [searchParams]);
+  }, [searchParams, queryClient]);
 
   function handlePayClick(inv: any) {
     const remaining = Number(inv.amount) - Number(inv.amount_paid || 0);
     setPayDialog({ invoiceId: inv.id, orgId: inv.org_id, amount: remaining });
-    setShowPlaidLink(false);
   }
 
   async function handleCardSelect() {
@@ -157,25 +180,28 @@ function TenantPaymentsContent() {
   async function handlePlaidAchSelect() {
     if (!payDialog) return;
 
-    // If no bank linked, show Plaid Link first
+    // If no bank linked, close dialog and show Plaid Link outside
     if (!tenantBank) {
-      setShowPlaidLink(true);
+      setPlaidLinkIntent(payDialog);
+      setPayDialog(null);
       return;
     }
 
     // Bank already linked — confirm and pay
-    await executePlaidPayment();
+    await executePlaidPayment(payDialog);
   }
 
-  async function executePlaidPayment() {
-    if (!payDialog) return;
-    setPayingInvoiceId(payDialog.invoiceId);
-    const dialogData = payDialog;
+  async function executePlaidPayment(intent: { invoiceId: string; orgId: string } | null) {
+    const data = intent || plaidLinkIntent;
+    if (!data) return;
+    setPayingInvoiceId(data.invoiceId);
     setPayDialog(null);
+    setPlaidLinkIntent(null);
 
-    const result = await initiatePlaidTransfer(dialogData.orgId, dialogData.invoiceId);
+    const result = await initiatePlaidTransfer(data.orgId, data.invoiceId);
     if (result.success) {
       toast.success('Payment initiated! ACH transfers take 1-3 business days.');
+      queryClient.invalidateQueries({ queryKey: ['tenant-invoices'] });
     } else {
       toast.error(result.error);
     }
@@ -184,9 +210,12 @@ function TenantPaymentsContent() {
 
   function handlePlaidLinkSuccess() {
     refreshTenantBank();
-    setShowPlaidLink(false);
     // After linking, auto-execute the payment
-    executePlaidPayment();
+    executePlaidPayment(null);
+  }
+
+  function handlePlaidLinkCancel() {
+    setPlaidLinkIntent(null);
   }
 
   async function handleAutoPayToggle(enabled: boolean) {
@@ -224,6 +253,30 @@ function TenantPaymentsContent() {
               checked={tenantBank.auto_pay_enabled}
               onCheckedChange={handleAutoPayToggle}
             />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Plaid Link flow — rendered OUTSIDE dialog so iframe isn't blocked */}
+      {plaidLinkIntent && (
+        <Card>
+          <CardContent className="pt-6 space-y-3">
+            <p className="font-medium">Link your bank account to pay via ACH</p>
+            <p className="text-sm text-muted-foreground">
+              Connect your bank to pay ${plaidLinkIntent.amount.toLocaleString()} + $1.00 fee via ACH transfer.
+            </p>
+            <div className="flex gap-2">
+              <PlaidLinkButton
+                role="tenant"
+                orgId={plaidLinkIntent.orgId}
+                onSuccess={handlePlaidLinkSuccess}
+              >
+                Link Bank Account
+              </PlaidLinkButton>
+              <Button variant="ghost" size="sm" onClick={handlePlaidLinkCancel}>
+                Cancel
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -304,74 +357,50 @@ function TenantPaymentsContent() {
             </DialogDescription>
           </DialogHeader>
 
-          {showPlaidLink && payDialog ? (
-            <div className="space-y-3 pt-2">
-              <p className="text-sm text-muted-foreground">Link your bank account to pay via ACH:</p>
-              <PlaidLinkButton
-                role="tenant"
-                orgId={payDialog.orgId}
-                onSuccess={handlePlaidLinkSuccess}
+          <div className="grid gap-3 pt-2">
+            {/* Card option (Stripe only) */}
+            {orgConfig.stripeActive && (
+              <button
+                onClick={handleCardSelect}
+                className="flex items-center gap-4 rounded-lg border p-4 text-left hover:bg-accent transition-colors"
               >
-                Link Bank Account
-              </PlaidLinkButton>
-              <Button variant="ghost" size="sm" onClick={() => setShowPlaidLink(false)}>
-                Back to payment methods
-              </Button>
-            </div>
-          ) : (
-            <div className="grid gap-3 pt-2">
-              {/* Card option (Stripe only) */}
-              {orgConfig.stripeActive && (
-                <button
-                  onClick={handleCardSelect}
-                  className="flex items-center gap-4 rounded-lg border p-4 text-left hover:bg-accent transition-colors"
-                >
-                  <CreditCard className="h-6 w-6 text-muted-foreground shrink-0" />
-                  <div className="flex-1">
-                    <p className="font-medium">Credit / Debit Card</p>
-                    <p className="text-sm text-muted-foreground">
-                      Fee: ${cardFee.toFixed(2)} (2.9% + $0.30)
-                    </p>
-                  </div>
-                  <p className="font-semibold text-sm">
-                    ${((payDialog?.amount ?? 0) + cardFee).toFixed(2)}
+                <CreditCard className="h-6 w-6 text-muted-foreground shrink-0" />
+                <div className="flex-1">
+                  <p className="font-medium">Credit / Debit Card</p>
+                  <p className="text-sm text-muted-foreground">
+                    Fee: ${cardFee.toFixed(2)} (2.9% + $0.30)
                   </p>
-                </button>
-              )}
+                </div>
+                <p className="font-semibold text-sm">
+                  ${((payDialog?.amount ?? 0) + cardFee).toFixed(2)}
+                </p>
+              </button>
+            )}
 
-              {/* ACH option — routes to Plaid or Stripe based on org config */}
-              {(orgConfig.stripeActive || orgConfig.plaidActive) && (
-                <button
-                  onClick={orgConfig.plaidActive ? handlePlaidAchSelect : handleStripeAchSelect}
-                  className="flex items-center gap-4 rounded-lg border p-4 text-left hover:bg-accent transition-colors"
-                >
-                  <Landmark className="h-6 w-6 text-muted-foreground shrink-0" />
-                  <div className="flex-1">
-                    <p className="font-medium">Bank Account (ACH)</p>
-                    <p className="text-sm text-muted-foreground">
-                      Fee: ${achFee.toFixed(2)} ({achLabel})
-                    </p>
-                    {orgConfig.plaidActive && tenantBank && (
-                      <div className="flex items-center gap-2 mt-1">
-                        <p className="text-xs text-muted-foreground">
-                          {tenantBank.institution_name} ****{tenantBank.account_mask}
-                        </p>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setShowPlaidLink(true); }}
-                          className="text-xs text-primary underline"
-                        >
-                          Use different account
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <p className="font-semibold text-sm">
-                    ${((payDialog?.amount ?? 0) + achFee).toFixed(2)}
+            {/* ACH option — routes to Plaid or Stripe based on org config */}
+            {(orgConfig.stripeActive || orgConfig.plaidActive) && (
+              <button
+                onClick={orgConfig.plaidActive ? handlePlaidAchSelect : handleStripeAchSelect}
+                className="flex items-center gap-4 rounded-lg border p-4 text-left hover:bg-accent transition-colors"
+              >
+                <Landmark className="h-6 w-6 text-muted-foreground shrink-0" />
+                <div className="flex-1">
+                  <p className="font-medium">Bank Account (ACH)</p>
+                  <p className="text-sm text-muted-foreground">
+                    Fee: ${achFee.toFixed(2)} ({achLabel})
                   </p>
-                </button>
-              )}
-            </div>
-          )}
+                  {orgConfig.plaidActive && tenantBank && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {tenantBank.institution_name} ****{tenantBank.account_mask}
+                    </p>
+                  )}
+                </div>
+                <p className="font-semibold text-sm">
+                  ${((payDialog?.amount ?? 0) + achFee).toFixed(2)}
+                </p>
+              </button>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

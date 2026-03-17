@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { getAuthContext } from '@/lib/auth';
 import {
   getFinancialStats,
@@ -9,10 +10,18 @@ import {
 import { StatCard, Card, CardContent, CardHeader, CardTitle } from '@onereal/ui';
 import { DollarSign, TrendingDown, TrendingUp, Percent } from 'lucide-react';
 import { DateRangeFilter } from '@/components/accounting/date-range-filter';
-import { IncomeExpenseChart } from '@/components/accounting/income-expense-chart';
-import { CategoryDonut } from '@/components/accounting/category-donut';
 import { PropertyFinancials } from '@/components/accounting/property-financials';
 import { resolveDateRange } from '@/lib/date-range';
+
+const IncomeExpenseChart = dynamic(
+  () => import('@/components/accounting/income-expense-chart').then((m) => ({ default: m.IncomeExpenseChart })),
+  { loading: () => <div className="h-[300px] animate-pulse rounded-md bg-muted" /> }
+);
+
+const CategoryDonut = dynamic(
+  () => import('@/components/accounting/category-donut').then((m) => ({ default: m.CategoryDonut })),
+  { loading: () => <div className="h-[200px] animate-pulse rounded-md bg-muted" /> }
+);
 
 interface PageProps {
   searchParams: Promise<{ range?: string; from?: string; to?: string }>;
