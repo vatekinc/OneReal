@@ -87,6 +87,7 @@ export type Database = {
           avatar_url: string | null;
           default_org_id: string | null;
           is_platform_admin: boolean;
+          onboarding_completed: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -99,6 +100,7 @@ export type Database = {
           avatar_url?: string | null;
           default_org_id?: string | null;
           is_platform_admin?: boolean;
+          onboarding_completed?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -111,6 +113,7 @@ export type Database = {
           avatar_url?: string | null;
           default_org_id?: string | null;
           is_platform_admin?: boolean;
+          onboarding_completed?: boolean;
           created_at?: string;
           updated_at?: string;
         };
