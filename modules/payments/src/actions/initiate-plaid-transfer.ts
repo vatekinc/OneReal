@@ -1,6 +1,7 @@
 'use server';
 
 import { createServerSupabaseClient } from '@onereal/database/server';
+import { createServiceRoleClient } from '@onereal/database/service-role';
 import { getPlaidClient } from '../lib/plaid';
 import { decryptPlaidToken } from '../lib/plaid-crypto';
 import { TransferType, TransferNetwork, ACHClass } from 'plaid';
@@ -80,19 +81,13 @@ export async function initiatePlaidTransfer(
       return { success: false, error: reason };
     }
 
-    // 7. Create the debit transfer
+    // 7. Create the debit transfer (type/network/ach_class/user are deprecated in transferCreate)
     const transferResponse = await plaid.transferCreate({
       access_token: accessToken,
       account_id: (tenantBank as any).plaid_account_id,
       authorization_id: authorization.id,
-      type: TransferType.Debit,
-      network: TransferNetwork.Ach,
       amount: totalDebit.toFixed(2),
-      description: `Rent - ${(invoice as any).invoice_number}`,
-      ach_class: ACHClass.Ppd,
-      user: {
-        legal_name: user.user_metadata?.full_name || user.email || 'Tenant',
-      },
+      description: `Rent ${(invoice as any).invoice_number}`.slice(0, 15),
       metadata: {
         invoice_id: invoiceId,
         org_id: orgId,
@@ -103,8 +98,9 @@ export async function initiatePlaidTransfer(
 
     const transferId = transferResponse.data.transfer.id;
 
-    // 8. Update invoice status
-    await db.from('invoices').update({
+    // 8. Update invoice status (use service role to bypass RLS)
+    const adminDb = createServiceRoleClient() as any;
+    await adminDb.from('invoices').update({
       plaid_transfer_id: transferId,
       payment_processor: 'plaid',
       convenience_fee: 1.0,
@@ -113,6 +109,9 @@ export async function initiatePlaidTransfer(
 
     return { success: true, data: { transferId } };
   } catch (err: any) {
-    return { success: false, error: err.message ?? 'Failed to initiate transfer' };
+    const plaidError = err.response?.data;
+    console.error('Plaid transfer error:', JSON.stringify(plaidError || err.message, null, 2));
+    const message = plaidError?.error_message || err.message || 'Failed to initiate transfer';
+    return { success: false, error: message };
   }
 }

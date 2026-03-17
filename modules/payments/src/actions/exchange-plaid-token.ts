@@ -72,6 +72,9 @@ export async function exchangePlaidToken(
 
     return { success: true, data: undefined };
   } catch (err: any) {
-    return { success: false, error: err.message ?? 'Failed to exchange token' };
+    const plaidError = err.response?.data;
+    console.error('Plaid exchange error:', JSON.stringify(plaidError || err.message, null, 2));
+    const message = plaidError?.error_message || err.message || 'Failed to exchange token';
+    return { success: false, error: message };
   }
 }

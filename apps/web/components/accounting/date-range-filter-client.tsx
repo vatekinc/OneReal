@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { cn, Button, Input } from '@onereal/ui';
 
 const DATE_RANGES = [
   { value: 'current_month', label: 'This Month' },
+  { value: 'last_month', label: 'Last Month' },
+  { value: 'ytd', label: 'YTD' },
   { value: 'current_year', label: 'This Year' },
   { value: '3yr', label: '3yr' },
   { value: '5yr', label: '5yr' },
@@ -19,6 +21,15 @@ function computeDateRange(range: string): { from?: string; to?: string } {
   switch (range) {
     case 'current_month': {
       const first = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { from: first.toISOString().split('T')[0], to: toDate };
+    }
+    case 'last_month': {
+      const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const last = new Date(now.getFullYear(), now.getMonth(), 0);
+      return { from: first.toISOString().split('T')[0], to: last.toISOString().split('T')[0] };
+    }
+    case 'ytd': {
+      const first = new Date(now.getFullYear(), 0, 1);
       return { from: first.toISOString().split('T')[0], to: toDate };
     }
     case 'current_year': {
@@ -75,7 +86,7 @@ export function DateRangeFilterClient({ onChange }: DateRangeFilterClientProps) 
   }
 
   // Emit initial value on mount
-  useMemo(() => {
+  useEffect(() => {
     onChange(computeDateRange('current_month'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -6,6 +6,10 @@ export { expenseSchema, type ExpenseFormValues } from './schemas/expense-schema'
 export { useIncome } from './hooks/use-income';
 export { useExpenses } from './hooks/use-expenses';
 export { useFinancialStats } from './hooks/use-financial-stats';
+export { useProfitAndLoss } from './hooks/use-pnl';
+export { useCashFlow } from './hooks/use-cash-flow';
+export { useInvoiceAging } from './hooks/use-invoice-aging';
+export { useRentCollection } from './hooks/use-rent-collection';
 
 // Server actions are NOT re-exported from the barrel file to avoid
 // mixing 'use client' and 'use server' in one module.

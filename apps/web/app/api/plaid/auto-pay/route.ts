@@ -1,7 +1,7 @@
 import { createServiceRoleClient } from '@onereal/database/service-role';
 import { getPlaidClient } from '@onereal/payments';
 import { decryptPlaidToken } from '@onereal/payments/lib/plaid-crypto';
-import { TransferType, TransferNetwork, ACHClass } from 'plaid';
+import { TransferType, TransferNetwork, ACHClass } from 'plaid'; // Used in transferAuthorizationCreate
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
@@ -80,17 +80,13 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      // Create transfer
+      // Create transfer (type/network/ach_class/user deprecated in transferCreate)
       const transferResponse = await plaid.transferCreate({
         access_token: accessToken,
         account_id: (bank as any).plaid_account_id,
         authorization_id: authResponse.data.authorization.id,
-        type: TransferType.Debit,
-        network: TransferNetwork.Ach,
         amount: totalDebit.toFixed(2),
-        description: `Auto-pay - ${invoice.invoice_number}`,
-        ach_class: ACHClass.Ppd,
-        user: { legal_name: 'Tenant' },
+        description: `Auto ${invoice.invoice_number}`.slice(0, 15),
         metadata: {
           invoice_id: invoice.id,
           org_id: invoice.org_id,
