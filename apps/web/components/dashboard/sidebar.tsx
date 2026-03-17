@@ -1,15 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn, Button, Sheet, SheetContent, SheetTrigger, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@onereal/ui';
 import {
   LayoutDashboard, Building2, Calculator, Users, Wrench,
   Settings, ChevronLeft, ChevronRight, ChevronDown, Menu,
-  Home, FileText, CreditCard,
+  Home, FileText, CreditCard, MessageSquare, BarChart3,
 } from 'lucide-react';
 import { useRole } from '@onereal/auth';
+import { useUnreadCount } from '@onereal/messaging';
 
 interface NavChild {
   label: string;
@@ -43,21 +44,24 @@ const navItems: NavItem[] = [
       { label: 'Service Providers', href: '/contacts/providers' },
     ],
   },
-  { label: 'Maintenance', href: '/maintenance', icon: Wrench, disabled: true, badge: 'Soon' },
+  { label: 'Maintenance', href: '/maintenance', icon: Wrench },
+  { label: 'Reports', href: '/reports', icon: BarChart3 },
+  { label: 'Messages', href: '/messages', icon: MessageSquare },
 ];
 
 const tenantNavItems: NavItem[] = [
   { label: 'Home', href: '/tenant', icon: Home },
   { label: 'My Lease', href: '/tenant/lease', icon: FileText },
   { label: 'Payments', href: '/tenant/payments', icon: CreditCard },
-  { label: 'Maintenance', href: '/maintenance', icon: Wrench, disabled: true, badge: 'Soon' },
+  { label: 'Maintenance', href: '/tenant/maintenance', icon: Wrench },
+  { label: 'Messages', href: '/tenant/messages', icon: MessageSquare },
 ];
 
 const bottomItems: NavItem[] = [
   { label: 'Settings', href: '/settings', icon: Settings },
 ];
 
-function NavLink({
+const NavLink = memo(function NavLink({
   item,
   collapsed,
   pathname,
@@ -129,7 +133,7 @@ function NavLink({
     <Link
       href={href}
       className={cn(
-        'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+        'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
         isParentActive
           ? 'bg-primary text-primary-foreground'
           : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
@@ -161,7 +165,7 @@ function NavLink({
   }
 
   return link;
-}
+});
 
 function SidebarContent({
   collapsed,
@@ -172,7 +176,14 @@ function SidebarContent({
 }) {
   const pathname = usePathname();
   const role = useRole();
-  const items = role === 'tenant' ? tenantNavItems : navItems;
+  const { data: unreadCount } = useUnreadCount();
+  const baseItems = role === 'tenant' ? tenantNavItems : navItems;
+  const items = baseItems.map((item) => {
+    if (item.label === 'Messages' && unreadCount && unreadCount > 0) {
+      return { ...item, badge: String(unreadCount) };
+    }
+    return item;
+  });
 
   return (
     <div className="flex h-full flex-col gap-2 p-3">
@@ -191,21 +202,19 @@ function SidebarContent({
         )}
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1">
-        <TooltipProvider delayDuration={0}>
+      <TooltipProvider delayDuration={0}>
+        <nav className="flex flex-1 flex-col gap-1">
           {items.map((item) => (
             <NavLink key={item.href} item={item} collapsed={collapsed} pathname={pathname} />
           ))}
-        </TooltipProvider>
-      </nav>
+        </nav>
 
-      <nav className="flex flex-col gap-1">
-        <TooltipProvider delayDuration={0}>
+        <nav className="flex flex-col gap-1">
           {bottomItems.map((item) => (
             <NavLink key={item.href} item={item} collapsed={collapsed} pathname={pathname} />
           ))}
-        </TooltipProvider>
-      </nav>
+        </nav>
+      </TooltipProvider>
     </div>
   );
 }

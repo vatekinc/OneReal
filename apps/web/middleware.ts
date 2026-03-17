@@ -52,15 +52,29 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Fetch profile (shared by onboarding check and role-based routing)
+  // Fetch profile and all memberships in parallel (avoids sequential waterfall)
   let profile: { first_name: string | null; default_org_id: string | null; is_platform_admin: boolean | null } | null = null;
+  let membership: { role: string | null } | null = null;
+
   if (user && !isPublicPath) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('first_name, default_org_id, is_platform_admin')
-      .eq('id', user.id)
-      .single();
-    profile = data;
+    const [profileResult, membershipsResult] = await Promise.all([
+      supabase.from('profiles')
+        .select('first_name, default_org_id, is_platform_admin')
+        .eq('id', user.id)
+        .single(),
+      supabase.from('org_members')
+        .select('role, org_id')
+        .eq('user_id', user.id),
+    ]);
+
+    profile = profileResult.data;
+
+    // Match the membership for the user's default org in-memory
+    if (profile?.default_org_id && membershipsResult.data) {
+      membership = (membershipsResult.data as any[]).find(
+        (m: any) => m.org_id === profile!.default_org_id
+      ) ?? null;
+    }
   }
 
   // Onboarding check (use shared profile)
@@ -80,15 +94,8 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Role-based tenant routing
+  // Role-based tenant routing (uses pre-fetched membership)
   if (user && !isOnboarding && !isPublicPath && profile?.default_org_id) {
-    const { data: membership } = await supabase
-      .from('org_members')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('org_id', profile.default_org_id)
-      .single();
-
     const role = membership?.role;
     const isTenantRoute = pathname.startsWith('/tenant');
 

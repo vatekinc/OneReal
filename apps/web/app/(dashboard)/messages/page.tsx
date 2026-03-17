@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useUser } from '@onereal/auth';
 import { getOrgPlan, createClient } from '@onereal/database';
 import { useConversations, createConversationSchema, type CreateConversationFormValues } from '@onereal/messaging';
@@ -35,11 +35,11 @@ export default function MessagesPage() {
   // Plan-based messaging gate
   const [messagingAllowed, setMessagingAllowed] = useState<boolean | null>(null);
   const [planName, setPlanName] = useState('');
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     if (!activeOrg) return;
-    const supabase = createClient() as any;
-    getOrgPlan(supabase, activeOrg.id).then((plan: any) => {
+    getOrgPlan(supabase as any, activeOrg.id).then((plan: any) => {
       if (plan) {
         setMessagingAllowed(plan.features?.messaging ?? false);
         setPlanName(plan.name);
@@ -47,7 +47,7 @@ export default function MessagesPage() {
         setMessagingAllowed(true);
       }
     }).catch(() => setMessagingAllowed(true));
-  }, [activeOrg]);
+  }, [activeOrg, supabase]);
 
   const { data: conversations, isLoading } = useConversations(activeOrg?.id ?? null);
   const { data: tenantsData } = useTenants({ orgId: activeOrg?.id ?? null });

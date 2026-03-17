@@ -1,152 +1,29 @@
-'use client';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getProfile } from '@onereal/database';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@onereal/database';
+import { TenantsClient } from './tenants-client';
 
-import { useState } from 'react';
-import { useUser } from '@onereal/auth';
-import { useTenants } from '@onereal/contacts';
-import { deleteTenant } from '@onereal/contacts/actions/delete-tenant';
-import { TenantDialog } from '@/components/contacts/tenant-dialog';
-import {
-  Button, Input,
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Badge,
-} from '@onereal/ui';
-import { Plus, Pencil, Trash2, Eye } from 'lucide-react';
-import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
-import type { Tenant } from '@onereal/types';
+type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 
-export default function TenantsPage() {
-  const { activeOrg } = useUser();
-  const queryClient = useQueryClient();
-  const router = useRouter();
+export default async function TenantsPage() {
+  const supabaseRaw = await createServerSupabaseClient();
+  const supabase = supabaseRaw as unknown as SupabaseClient<Database>;
 
-  const [search, setSearch] = useState('');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
 
-  const { data: tenantsData, isLoading } = useTenants({
-    orgId: activeOrg?.id ?? null,
-    search: search || undefined,
-  });
+  const profile = await getProfile(supabase, user.id).catch(() => null) as ProfileRow | null;
+  if (!profile?.default_org_id) return null;
 
-  const tenants = (tenantsData ?? []) as any[];
+  const orgId = profile.default_org_id;
 
-  function getActiveLeaseCount(tenant: any) {
-    return (tenant.leases ?? []).filter((l: any) => l.status === 'active').length;
-  }
+  // Fetch tenants with lease relations server-side
+  const { data: tenants } = await (supabase as any)
+    .from('tenants')
+    .select('*, leases(id, status, unit_id, units(unit_number, property_id, properties(id, name)))')
+    .eq('org_id', orgId)
+    .order('last_name', { ascending: true });
 
-  function getPropertyNames(tenant: any): string[] {
-    const names = new Set<string>();
-    for (const lease of (tenant.leases ?? [])) {
-      if (lease.status === 'active') {
-        const propName = lease.units?.properties?.name;
-        if (propName) names.add(propName);
-      }
-    }
-    return Array.from(names);
-  }
-
-  async function handleDelete(id: string) {
-    if (!confirm('Are you sure you want to delete this tenant?')) return;
-    const result = await deleteTenant(id);
-    if (result.success) {
-      toast.success('Tenant deleted');
-      queryClient.invalidateQueries({ queryKey: ['tenants'] });
-    } else {
-      toast.error(result.error);
-    }
-  }
-
-  function handleEdit(tenant: Tenant) {
-    setEditingTenant(tenant);
-    setDialogOpen(true);
-  }
-
-  function handleAdd() {
-    setEditingTenant(null);
-    setDialogOpen(true);
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Tenants</h1>
-        <Button className="gap-2" onClick={handleAdd}>
-          <Plus className="h-4 w-4" /> Add Tenant
-        </Button>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <Input
-          placeholder="Search tenants..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
-        />
-      </div>
-
-      {isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading...</p>
-      ) : tenants.length === 0 ? (
-        <div className="rounded-lg border bg-card p-12 text-center">
-          <p className="text-muted-foreground mb-4">No tenants yet</p>
-          <Button onClick={handleAdd}>Add your first tenant</Button>
-        </div>
-      ) : (
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Properties</TableHead>
-                <TableHead>Active Leases</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {tenants.map((tenant: any) => (
-                <TableRow key={tenant.id}>
-                  <TableCell className="font-medium">
-                    {tenant.first_name} {tenant.last_name}
-                  </TableCell>
-                  <TableCell>{tenant.email ?? '\u2014'}</TableCell>
-                  <TableCell>{tenant.phone ?? '\u2014'}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {getPropertyNames(tenant).map((name) => (
-                        <Badge key={name} variant="secondary">{name}</Badge>
-                      ))}
-                      {getPropertyNames(tenant).length === 0 && '\u2014'}
-                    </div>
-                  </TableCell>
-                  <TableCell>{getActiveLeaseCount(tenant)}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => router.push(`/contacts/tenants/${tenant.id}`)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(tenant)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(tenant.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-
-      <TenantDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        tenant={editingTenant}
-      />
-    </div>
-  );
+  return <TenantsClient orgId={orgId} initialData={tenants ?? []} />;
 }

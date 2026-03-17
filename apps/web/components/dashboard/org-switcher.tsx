@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useUser } from '@onereal/auth';
 import { createClient, updateProfile } from '@onereal/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -13,18 +14,18 @@ import {
 import { Building2, ChevronDown, Check } from 'lucide-react';
 
 export function OrgSwitcher() {
-  const { activeOrg, organizations, loading } = useUser();
+  const { activeOrg, organizations, loading, profile } = useUser();
   const router = useRouter();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabase = createClient() as unknown as SupabaseClient<Database>;
+  const supabase = useMemo(
+    () => createClient() as unknown as SupabaseClient<Database>,
+    []
+  );
 
   if (loading || !activeOrg) return null;
 
   async function switchOrg(orgId: string) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    await updateProfile(supabase, user.id, { default_org_id: orgId });
+    if (!profile?.id) return;
+    await updateProfile(supabase, profile.id, { default_org_id: orgId });
     router.refresh();
   }
 
