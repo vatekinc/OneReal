@@ -9,6 +9,8 @@ interface SubscriptionCheckoutOptions {
   type: 'subscription';
   planId: string;
   period: 'monthly' | 'yearly';
+  successUrl?: string;
+  cancelUrl?: string;
 }
 
 interface PaymentCheckoutOptions {
@@ -71,8 +73,8 @@ export async function createCheckoutSession(
         mode: 'subscription',
         customer: customerId,
         line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${baseUrl}/settings?subscription=success`,
-        cancel_url: `${baseUrl}/settings?subscription=canceled`,
+        success_url: options.successUrl || `${baseUrl}/settings?subscription=success`,
+        cancel_url: options.cancelUrl || `${baseUrl}/settings?subscription=canceled`,
         metadata: { org_id: orgId, plan_id: options.planId },
       });
 

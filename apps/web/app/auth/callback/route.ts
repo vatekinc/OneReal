@@ -24,7 +24,7 @@ export async function GET(request: Request) {
           .single();
 
         const profile = data as ProfileRow | null;
-        if (!profile?.first_name) {
+        if (!profile?.onboarding_completed) {
           return NextResponse.redirect(`${origin}/onboarding`);
         }
       }

@@ -53,13 +53,13 @@ export async function middleware(request: NextRequest) {
   }
 
   // Fetch profile and all memberships in parallel (avoids sequential waterfall)
-  let profile: { first_name: string | null; default_org_id: string | null; is_platform_admin: boolean | null } | null = null;
+  let profile: { first_name: string | null; default_org_id: string | null; is_platform_admin: boolean | null; onboarding_completed: boolean | null } | null = null;
   let membership: { role: string | null } | null = null;
 
   if (user && !isPublicPath) {
     const [profileResult, membershipsResult] = await Promise.all([
       supabase.from('profiles')
-        .select('first_name, default_org_id, is_platform_admin')
+        .select('first_name, default_org_id, is_platform_admin, onboarding_completed')
         .eq('id', user.id)
         .single(),
       supabase.from('org_members')
@@ -78,7 +78,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Onboarding check (use shared profile)
-  if (user && !isOnboarding && !isPublicPath && !profile?.first_name) {
+  if (user && !isOnboarding && !isPublicPath && !profile?.onboarding_completed) {
     const url = request.nextUrl.clone();
     url.pathname = '/onboarding';
     return NextResponse.redirect(url);

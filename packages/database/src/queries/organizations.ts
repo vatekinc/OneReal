@@ -56,45 +56,18 @@ export async function updateOrganization(
 
 export async function createCompanyOrg(
   client: Client,
-  userId: string,
+  _userId: string,
   name: string,
   slug: string
 ) {
-  // Fetch default plan
-  const { data: defaultPlan } = await (client as any)
-    .from('plans')
-    .select('id')
-    .eq('is_default', true)
-    .single();
+  // Use SECURITY DEFINER RPC to bypass RLS
+  // (user isn't in org_members yet, so client-side inserts fail)
+  const { data, error } = await (client as any).rpc('create_company_org', {
+    p_name: name,
+    p_slug: slug,
+  });
 
-  if (!defaultPlan) throw new Error('No default plan configured');
+  if (error) throw error;
 
-  // Create org
-  const { data: orgData, error: orgError } = await client
-    .from('organizations')
-    .insert({ name, slug, type: 'company', plan_id: (defaultPlan as any).id } as any)
-    .select()
-    .single();
-
-  if (orgError) throw orgError;
-  if (!orgData) throw new Error('Failed to create organization');
-
-  const org = orgData as OrgRow;
-
-  // Add user as admin
-  const { error: memberError } = await client
-    .from('org_members')
-    .insert({ org_id: org.id, user_id: userId, role: 'admin', status: 'active' });
-
-  if (memberError) throw memberError;
-
-  // Set as default org
-  const { error: profileError } = await client
-    .from('profiles')
-    .update({ default_org_id: org.id })
-    .eq('id', userId);
-
-  if (profileError) throw profileError;
-
-  return org;
+  return { id: data, name, slug, type: 'company' as const };
 }
