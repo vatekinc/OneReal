@@ -33,13 +33,17 @@ export function TenantsClient({ orgId }: TenantsClientProps) {
 
   const tenants = (tenantsData ?? []) as any[];
 
+  function getTenantLeases(tenant: any) {
+    return (tenant.lease_tenants ?? []).map((lt: any) => lt.leases).filter(Boolean);
+  }
+
   function getActiveLeaseCount(tenant: any) {
-    return (tenant.leases ?? []).filter((l: any) => l.status === 'active').length;
+    return getTenantLeases(tenant).filter((l: any) => l.status === 'active').length;
   }
 
   function getPropertyNames(tenant: any): string[] {
     const names = new Set<string>();
-    for (const lease of (tenant.leases ?? [])) {
+    for (const lease of getTenantLeases(tenant)) {
       if (lease.status === 'active') {
         const propName = lease.units?.properties?.name;
         if (propName) names.add(propName);

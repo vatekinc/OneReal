@@ -16,7 +16,7 @@ export function useTenants(filters: TenantFilters) {
       const supabase = createClient();
       let query = (supabase as any)
         .from('tenants')
-        .select('*, leases(id, status, unit_id, units(unit_number, property_id, properties(id, name)))')
+        .select('*, lease_tenants(lease_id, leases(id, status, unit_id, units(unit_number, property_id, properties(id, name))))')
         .eq('org_id', filters.orgId)
         .order('last_name', { ascending: true });
 
