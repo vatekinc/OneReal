@@ -35,7 +35,7 @@ CREATE INDEX idx_recurring_expenses_property ON public.recurring_expenses(proper
 -- Auto-update updated_at
 CREATE TRIGGER handle_recurring_expenses_updated_at
   BEFORE UPDATE ON public.recurring_expenses
-  FOR EACH ROW EXECUTE FUNCTION extensions.moddatetime(updated_at);
+  FOR EACH ROW EXECUTE FUNCTION moddatetime('updated_at');
 
 -- RLS
 ALTER TABLE public.recurring_expenses ENABLE ROW LEVEL SECURITY;
@@ -62,10 +62,16 @@ CREATE POLICY "Managers can delete recurring expenses"
 ```sql
 ALTER TABLE public.expenses ADD COLUMN IF NOT EXISTS recurring_expense_id UUID REFERENCES public.recurring_expenses(id) ON DELETE SET NULL;
 ALTER TABLE public.expenses ADD COLUMN IF NOT EXISTS generated_for_period TEXT;
+
+-- Enforce idempotency at DB level: one generated expense per template per period
+CREATE UNIQUE INDEX idx_expenses_recurring_period
+  ON public.expenses(recurring_expense_id, generated_for_period)
+  WHERE recurring_expense_id IS NOT NULL;
 ```
 
 - `recurring_expense_id`: links generated expenses back to their template. Null for manually created expenses.
 - `generated_for_period`: stores `"YYYY-MM"` string for the target month (e.g., `"2026-03"`). Used for idempotency checks instead of relying on `transaction_date` (which users can edit). Null for manually created expenses.
+- The partial unique index on `(recurring_expense_id, generated_for_period)` prevents duplicate generation even under concurrent requests (e.g., double-click).
 
 ## Server Actions
 
@@ -94,7 +100,7 @@ All in `modules/accounting/src/actions/`.
 
 - Input: `orgId: string`, `month: number`, `year: number`
 - Logic:
-  1. Fetch all active `recurring_expenses` for the org where `start_date <= last day of target month` and (`end_date` is null or `end_date >= first day of target month`)
+  1. Fetch all `recurring_expenses` for the org where `is_active = true` AND `start_date <= last day of target month` AND (`end_date` is null or `end_date >= first day of target month`)
   2. For each template:
      - **Monthly:** always eligible
      - **Yearly:** only if target month matches the month of `start_date`
@@ -109,14 +115,20 @@ All in `modules/accounting/src/actions/`.
      - `provider_id`: copied from template
      - `transaction_date`: 1st of target month
      - `recurring_expense_id`: link to template
+     - `receipt_url`: null (no receipt at generation time)
      - `generated_for_period`: `'YYYY-MM'` string for target month
-  5. Return `ActionResult<{ generated: number; skipped: number }>`
+  5. Handle unique constraint violation gracefully (concurrent request already generated) — count as skipped
+  6. Return `ActionResult<{ generated: number; skipped: number }>`
 
 ### `preview-generate-expenses.ts`
+
+Co-located in `generate-expenses.ts` as a separate exported function `previewGenerateExpenses` (follows the pattern in `generate-invoices.ts` where `getGenerationPreview` lives alongside `generateInvoices`).
 
 - Input: `orgId: string`, `month: number`, `year: number`
 - Same filtering and idempotency logic as `generate-expenses` but only returns the count (no inserts)
 - Returns `ActionResult<{ eligible: number }>`
+
+> **Note:** Server actions are NOT re-exported from the barrel `index.ts`. Import via deep path: `import { generateExpenses, previewGenerateExpenses } from '@onereal/accounting/actions/generate-expenses'`.
 
 ## Hooks
 
@@ -165,9 +177,10 @@ Update `Expense` interface to add:
 Add a new **"Recurring"** tab alongside Overview, Units, Images, Leases. Add an inline `PropertyRecurringExpenses` component (same pattern as the existing `PropertyLeases` component in this file) that:
 
 - Shows a table of recurring expense templates for the property
-- Columns: Type, Amount, Frequency, Vendor, Status (active/inactive), Actions (edit/delete)
+- Columns: Type, Amount, Frequency, Vendor, Status (active/inactive toggle switch), Actions (edit/delete)
 - "Add Recurring Expense" button opens a dialog
 - Edit/delete inline actions
+- Active/inactive toggle: inline switch in the Status column that calls `updateRecurringExpense` to flip `is_active`
 
 ### 2. Recurring Expense Dialog
 
@@ -191,7 +204,7 @@ Dialog triggered from the Outgoing page header:
 - Shows preview count: "X recurring expenses to generate for March 2026"
 - "Generate" button calls `generateExpenses` to create expense records
 - Success toast: "Generated X expenses (Y already existed)"
-- Invalidates `['expenses']` and `['financial-stats']` query caches
+- Invalidates `['expenses']`, `['financial-stats']`, and the preview count query caches on success
 
 ### 4. Outgoing Page Enhancement
 
@@ -206,7 +219,8 @@ Dialog triggered from the Outgoing page header:
 - **Template deleted after generation:** Generated expenses remain (foreign key uses `ON DELETE SET NULL`). Their `recurring_expense_id` becomes null, so they behave like manually created expenses.
 - **End date in the middle of a month:** Template is eligible for that month. The `end_date >= first day of target month` check ensures partial-month coverage still generates.
 - **Start date in the future:** Template is skipped for months before `start_date`. The `start_date <= last day of target month` check handles this.
-- **Multiple generations in same month:** Idempotent via `generated_for_period` column. Even if a user edits the `transaction_date` of a generated expense, the idempotency check still works because it uses `generated_for_period`, not `transaction_date`.
+- **Multiple generations in same month:** Idempotent via `generated_for_period` column and the partial unique index. Even if a user edits the `transaction_date` of a generated expense, the idempotency check still works because it uses `generated_for_period`, not `transaction_date`. Concurrent requests are also safe due to the DB-level unique constraint.
+- **Service provider deleted:** `ON DELETE SET NULL` sets `provider_id` to null on the template. Future generations produce expenses without a vendor link. Already-generated expenses retain their original `provider_id` (also set null by cascade).
 
 ## Files to Create/Modify
 
@@ -218,8 +232,7 @@ Dialog triggered from the Outgoing page header:
 | `modules/accounting/src/actions/create-recurring-expense.ts` | NEW |
 | `modules/accounting/src/actions/update-recurring-expense.ts` | NEW |
 | `modules/accounting/src/actions/delete-recurring-expense.ts` | NEW |
-| `modules/accounting/src/actions/generate-expenses.ts` | NEW |
-| `modules/accounting/src/actions/preview-generate-expenses.ts` | NEW |
+| `modules/accounting/src/actions/generate-expenses.ts` | NEW - contains both `generateExpenses` and `previewGenerateExpenses` |
 | `modules/accounting/src/hooks/use-recurring-expenses.ts` | NEW |
 | `modules/accounting/src/index.ts` | MODIFY - export hook + schema |
 | `apps/web/components/accounting/recurring-expense-dialog.tsx` | NEW |
