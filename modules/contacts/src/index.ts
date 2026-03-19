@@ -11,6 +11,7 @@ export { useProviders } from './hooks/use-providers';
 export { useProvider } from './hooks/use-provider';
 export { useLeases } from './hooks/use-leases';
 export { useLeaseCharges } from './hooks/use-lease-charges';
+export { useLeaseDocuments } from './hooks/use-lease-documents';
 
 // Server actions are NOT re-exported from the barrel file to avoid
 // mixing 'use client' and 'use server' in one module.
