@@ -11,16 +11,16 @@ Allow property managers to set up recurring expense templates per property (e.g.
 ```sql
 CREATE TABLE public.recurring_expenses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  org_id UUID NOT NULL REFERENCES public.organizations(id),
+  org_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
   property_id UUID NOT NULL REFERENCES public.properties(id) ON DELETE CASCADE,
   unit_id UUID REFERENCES public.units(id) ON DELETE SET NULL,
   expense_type TEXT NOT NULL CHECK (expense_type IN (
     'mortgage', 'maintenance', 'repairs', 'utilities', 'insurance',
     'taxes', 'management', 'advertising', 'legal', 'hoa', 'home_warranty', 'other'
   )),
-  amount DECIMAL(10,2) NOT NULL,
+  amount DECIMAL(10,2) NOT NULL CHECK (amount > 0),
   frequency TEXT NOT NULL CHECK (frequency IN ('monthly', 'yearly')),
-  description TEXT DEFAULT '',
+  description TEXT NOT NULL DEFAULT '',
   provider_id UUID REFERENCES public.service_providers(id) ON DELETE SET NULL,
   start_date DATE NOT NULL,
   end_date DATE,
@@ -31,19 +31,41 @@ CREATE TABLE public.recurring_expenses (
 
 CREATE INDEX idx_recurring_expenses_org ON public.recurring_expenses(org_id);
 CREATE INDEX idx_recurring_expenses_property ON public.recurring_expenses(property_id);
-```
 
-RLS policies: org-scoped, same pattern as `lease_charges`:
-- Users can SELECT where `org_id IN (SELECT get_user_org_ids())`
-- Managers can INSERT/UPDATE/DELETE where `org_id IN (SELECT get_user_managed_org_ids())`
+-- Auto-update updated_at
+CREATE TRIGGER handle_recurring_expenses_updated_at
+  BEFORE UPDATE ON public.recurring_expenses
+  FOR EACH ROW EXECUTE FUNCTION extensions.moddatetime(updated_at);
+
+-- RLS
+ALTER TABLE public.recurring_expenses ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view recurring expenses in their orgs"
+  ON public.recurring_expenses FOR SELECT
+  USING (org_id IN (SELECT public.get_user_org_ids()));
+
+CREATE POLICY "Managers can insert recurring expenses"
+  ON public.recurring_expenses FOR INSERT
+  WITH CHECK (org_id IN (SELECT public.get_user_managed_org_ids()));
+
+CREATE POLICY "Managers can update recurring expenses"
+  ON public.recurring_expenses FOR UPDATE
+  USING (org_id IN (SELECT public.get_user_managed_org_ids()));
+
+CREATE POLICY "Managers can delete recurring expenses"
+  ON public.recurring_expenses FOR DELETE
+  USING (org_id IN (SELECT public.get_user_managed_org_ids()));
+```
 
 ### Extend `expenses` table
 
 ```sql
 ALTER TABLE public.expenses ADD COLUMN IF NOT EXISTS recurring_expense_id UUID REFERENCES public.recurring_expenses(id) ON DELETE SET NULL;
+ALTER TABLE public.expenses ADD COLUMN IF NOT EXISTS generated_for_period TEXT;
 ```
 
-This column links generated expenses back to their template for idempotency checks. Null for manually created expenses.
+- `recurring_expense_id`: links generated expenses back to their template. Null for manually created expenses.
+- `generated_for_period`: stores `"YYYY-MM"` string for the target month (e.g., `"2026-03"`). Used for idempotency checks instead of relying on `transaction_date` (which users can edit). Null for manually created expenses.
 
 ## Server Actions
 
@@ -53,7 +75,7 @@ All in `modules/accounting/src/actions/`.
 
 - Input: `orgId: string`, validated form values
 - Schema: `recurring_expense_schema` (property_id, unit_id, expense_type, amount, frequency, description, provider_id, start_date, end_date)
-- Inserts into `recurring_expenses` table
+- Inserts into `recurring_expenses` table with `org_id` set server-side
 - Returns `ActionResult<{ id: string }>`
 
 ### `update-recurring-expense.ts`
@@ -76,24 +98,31 @@ All in `modules/accounting/src/actions/`.
   2. For each template:
      - **Monthly:** always eligible
      - **Yearly:** only if target month matches the month of `start_date`
-  3. Check idempotency: skip if an expense with matching `recurring_expense_id` already exists for that month/year (check `transaction_date` falls within the target month)
+  3. Check idempotency: skip if an expense with matching `recurring_expense_id` AND `generated_for_period = 'YYYY-MM'` already exists (does not rely on `transaction_date`)
   4. Create expense records with:
+     - `org_id`: copied from template
+     - `property_id`: copied from template
+     - `unit_id`: copied from template
+     - `expense_type`: copied from template
+     - `amount`: copied from template
+     - `description`: copied from template
+     - `provider_id`: copied from template
      - `transaction_date`: 1st of target month
      - `recurring_expense_id`: link to template
-     - All other fields copied from template (property_id, unit_id, expense_type, amount, description, provider_id)
+     - `generated_for_period`: `'YYYY-MM'` string for target month
   5. Return `ActionResult<{ generated: number; skipped: number }>`
 
 ### `preview-generate-expenses.ts`
 
 - Input: `orgId: string`, `month: number`, `year: number`
-- Same filtering logic as `generate-expenses` but only returns the count of eligible templates (no inserts)
+- Same filtering and idempotency logic as `generate-expenses` but only returns the count (no inserts)
 - Returns `ActionResult<{ eligible: number }>`
 
 ## Hooks
 
-### `use-recurring-expenses.ts`
+All in `modules/accounting/src/hooks/`.
 
-In `modules/accounting/src/hooks/`:
+### `use-recurring-expenses.ts`
 
 - Query hook: fetches all recurring expenses for a given `propertyId`
 - Joins `service_providers(name)` for vendor display
@@ -123,7 +152,9 @@ export interface RecurringExpense {
 }
 ```
 
-Update `Expense` interface to add `recurring_expense_id: string | null`.
+Update `Expense` interface to add:
+- `recurring_expense_id: string | null`
+- `generated_for_period: string | null`
 
 ## UI Components
 
@@ -131,7 +162,7 @@ Update `Expense` interface to add `recurring_expense_id: string | null`.
 
 **File:** `apps/web/components/properties/property-detail-tabs.tsx`
 
-Add a new **"Recurring"** tab alongside Overview, Units, Images, Leases. Renders a `PropertyRecurringExpenses` component that:
+Add a new **"Recurring"** tab alongside Overview, Units, Images, Leases. Add an inline `PropertyRecurringExpenses` component (same pattern as the existing `PropertyLeases` component in this file) that:
 
 - Shows a table of recurring expense templates for the property
 - Columns: Type, Amount, Frequency, Vendor, Status (active/inactive), Actions (edit/delete)
@@ -156,10 +187,11 @@ Dialog for creating/editing a recurring expense template:
 Dialog triggered from the Outgoing page header:
 
 - Month/year picker (defaults to current month)
+- Calls `previewGenerateExpenses` on mount and on month/year change to show preview count
 - Shows preview count: "X recurring expenses to generate for March 2026"
-- "Generate" button creates expense records
+- "Generate" button calls `generateExpenses` to create expense records
 - Success toast: "Generated X expenses (Y already existed)"
-- Invalidates `['expenses']` query cache
+- Invalidates `['expenses']` and `['financial-stats']` query caches
 
 ### 4. Outgoing Page Enhancement
 
@@ -168,11 +200,19 @@ Dialog triggered from the Outgoing page header:
 - Add "Generate Expenses" button next to "New Expense" in the header
 - Opens `GenerateExpensesDialog`
 
+## Edge Cases
+
+- **Template amount changed after generation:** Previously generated expenses keep their original amount. Only future generations use the updated template amount.
+- **Template deleted after generation:** Generated expenses remain (foreign key uses `ON DELETE SET NULL`). Their `recurring_expense_id` becomes null, so they behave like manually created expenses.
+- **End date in the middle of a month:** Template is eligible for that month. The `end_date >= first day of target month` check ensures partial-month coverage still generates.
+- **Start date in the future:** Template is skipped for months before `start_date`. The `start_date <= last day of target month` check handles this.
+- **Multiple generations in same month:** Idempotent via `generated_for_period` column. Even if a user edits the `transaction_date` of a generated expense, the idempotency check still works because it uses `generated_for_period`, not `transaction_date`.
+
 ## Files to Create/Modify
 
 | File | Action |
 |------|--------|
-| `supabase/migrations/20260319000002_recurring_expenses.sql` | NEW - table + RLS + expenses column |
+| `supabase/migrations/20260319000002_recurring_expenses.sql` | NEW - table + RLS + triggers + expenses columns |
 | `packages/types/src/models.ts` | MODIFY - add RecurringExpense, update Expense |
 | `modules/accounting/src/schemas/recurring-expense-schema.ts` | NEW - Zod schema |
 | `modules/accounting/src/actions/create-recurring-expense.ts` | NEW |
@@ -181,20 +221,20 @@ Dialog triggered from the Outgoing page header:
 | `modules/accounting/src/actions/generate-expenses.ts` | NEW |
 | `modules/accounting/src/actions/preview-generate-expenses.ts` | NEW |
 | `modules/accounting/src/hooks/use-recurring-expenses.ts` | NEW |
-| `modules/accounting/src/index.ts` | MODIFY - export hook |
+| `modules/accounting/src/index.ts` | MODIFY - export hook + schema |
 | `apps/web/components/accounting/recurring-expense-dialog.tsx` | NEW |
 | `apps/web/components/accounting/generate-expenses-dialog.tsx` | NEW |
-| `apps/web/components/properties/property-detail-tabs.tsx` | MODIFY - add Recurring tab |
+| `apps/web/components/properties/property-detail-tabs.tsx` | MODIFY - add Recurring tab + inline PropertyRecurringExpenses component |
 | `apps/web/app/(dashboard)/accounting/outgoing/page.tsx` | MODIFY - add Generate button |
 
 ## Acceptance Criteria
 
 1. Create a recurring expense template (monthly mortgage) on a property -> record appears in recurring_expenses table
 2. Edit/delete recurring expense templates
-3. Generate expenses for a month -> expense records created with correct amounts and linked via `recurring_expense_id`
-4. Re-running generation for the same month -> skips already-generated expenses (idempotent)
+3. Generate expenses for a month -> expense records created with correct amounts, linked via `recurring_expense_id`, and tagged with `generated_for_period`
+4. Re-running generation for the same month -> skips already-generated expenses (idempotent via `generated_for_period`)
 5. Yearly expenses only generate in their start month
 6. Inactive templates are skipped during generation
-7. Templates with end_date in the past are skipped
+7. Templates with end_date before the target month are skipped
 8. Preview shows correct count before generation
 9. Generated expenses appear in the Outgoing page expense list
