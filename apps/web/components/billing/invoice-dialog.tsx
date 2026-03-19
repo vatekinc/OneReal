@@ -96,6 +96,25 @@ export function InvoiceDialog({ open, onOpenChange, invoice, defaultDirection }:
   );
   const units = (selectedProperty as any)?.units ?? [];
 
+  // Filter tenants to only those with an active lease on the selected property
+  const filteredTenants = useMemo(() => {
+    if (!selectedPropertyId) return tenants;
+    return tenants.filter((t: any) =>
+      t.lease_tenants?.some((lt: any) => {
+        const lease = lt.leases;
+        if (!lease || lease.status !== 'active') return false;
+        return lease.units?.property_id === selectedPropertyId;
+      }),
+    );
+  }, [tenants, selectedPropertyId]);
+
+  // Auto-select tenant when property changes and only one tenant matches
+  useEffect(() => {
+    if (filteredTenants.length === 1 && direction === 'receivable') {
+      form.setValue('tenant_id', filteredTenants[0].id);
+    }
+  }, [filteredTenants, direction, form]);
+
   async function onSubmit(values: InvoiceFormValues) {
     if (!activeOrg) {
       toast.error('No active organization');
@@ -170,7 +189,7 @@ export function InvoiceDialog({ open, onOpenChange, invoice, defaultDirection }:
                     <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined}>
                       <FormControl><SelectTrigger><SelectValue placeholder="Select tenant" /></SelectTrigger></FormControl>
                       <SelectContent>
-                        {tenants.map((t) => (
+                        {filteredTenants.map((t: any) => (
                           <SelectItem key={t.id} value={t.id}>
                             {t.first_name} {t.last_name}
                           </SelectItem>
