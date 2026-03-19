@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useUser } from '@onereal/auth';
 import { useInvoices } from '@onereal/billing';
 import { useProperties } from '@onereal/portfolio';
@@ -11,14 +11,24 @@ import { InvoiceTable } from '@/components/billing/invoice-table';
 import { InvoiceDialog } from '@/components/billing/invoice-dialog';
 import { PaymentDialog } from '@/components/billing/payment-dialog';
 import { GenerateInvoicesDialog } from '@/components/billing/generate-invoices-dialog';
+import { resolveDateRange } from '@/lib/date-range';
 import {
   Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   Tabs, TabsList, TabsTrigger,
+  cn,
 } from '@onereal/ui';
 import { Plus, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Invoice } from '@onereal/types';
+
+const DATE_RANGES = [
+  { value: 'current_month', label: 'This Month' },
+  { value: 'current_year', label: 'This Year' },
+  { value: '3yr', label: '3yr' },
+  { value: '5yr', label: '5yr' },
+  { value: 'all', label: 'All Time' },
+];
 
 type TabValue = 'open' | 'paid' | 'all';
 
@@ -27,9 +37,12 @@ export default function IncomingPage() {
   const queryClient = useQueryClient();
 
   const [tab, setTab] = useState<TabValue>('open');
+  const [dateRange, setDateRange] = useState('current_month');
   const [search, setSearch] = useState('');
   const [propertyFilter, setPropertyFilter] = useState('');
   const [tenantFilter, setTenantFilter] = useState('');
+
+  const resolvedDates = useMemo(() => resolveDateRange(dateRange), [dateRange]);
 
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
@@ -51,6 +64,8 @@ export default function IncomingPage() {
     propertyId: propertyFilter || undefined,
     tenantId: tenantFilter || undefined,
     search: search || undefined,
+    from: resolvedDates?.from,
+    to: resolvedDates?.to,
   });
 
   // Filter out void for "all" tab
@@ -100,13 +115,28 @@ export default function IncomingPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Incoming</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" className="gap-2" onClick={() => setGenerateDialogOpen(true)}>
-            <Zap className="h-4 w-4" /> Generate Invoices
-          </Button>
-          <Button className="gap-2" onClick={handleNewInvoice}>
-            <Plus className="h-4 w-4" /> New Invoice
-          </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex gap-1.5">
+            {DATE_RANGES.map((r) => (
+              <Button
+                key={r.value}
+                variant={dateRange === r.value ? 'default' : 'secondary'}
+                size="sm"
+                onClick={() => setDateRange(r.value)}
+                className={cn('text-xs', dateRange !== r.value && 'text-muted-foreground')}
+              >
+                {r.label}
+              </Button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" className="gap-2" onClick={() => setGenerateDialogOpen(true)}>
+              <Zap className="h-4 w-4" /> Generate Invoices
+            </Button>
+            <Button className="gap-2" onClick={handleNewInvoice}>
+              <Plus className="h-4 w-4" /> New Invoice
+            </Button>
+          </div>
         </div>
       </div>
 

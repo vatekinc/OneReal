@@ -11,6 +11,8 @@ export interface InvoiceFilters {
   tenantId?: string;
   providerId?: string;
   search?: string;
+  from?: string;
+  to?: string;
 }
 
 export function useInvoices(filters: InvoiceFilters) {
@@ -46,6 +48,12 @@ export function useInvoices(filters: InvoiceFilters) {
       }
       if (filters.search) {
         query = query.or(`description.ilike.%${filters.search}%,invoice_number.ilike.%${filters.search}%`);
+      }
+      if (filters.from) {
+        query = query.gte('due_date', filters.from);
+      }
+      if (filters.to) {
+        query = query.lte('due_date', filters.to);
       }
 
       const { data, error } = await query;
