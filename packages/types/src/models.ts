@@ -142,8 +142,29 @@ export interface Expense {
   transaction_date: string;
   receipt_url: string | null;
   provider_id: string | null;
+  recurring_expense_id: string | null;
+  generated_for_period: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface RecurringExpense {
+  id: string;
+  org_id: string;
+  property_id: string;
+  unit_id: string | null;
+  expense_type: string;
+  amount: number;
+  frequency: 'monthly' | 'yearly';
+  description: string;
+  provider_id: string | null;
+  start_date: string;
+  end_date: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  // Joined by hook, not stored in table:
+  service_providers?: { name: string } | null;
 }
 
 export interface FinancialStats {
