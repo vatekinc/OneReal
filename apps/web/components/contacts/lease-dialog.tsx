@@ -21,6 +21,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Plus, Trash2, X, Check, ChevronsUpDown } from 'lucide-react';
+import { LeaseDocumentUpload } from './lease-document-upload';
 import type { LeaseCharge } from '@onereal/types';
 
 const leaseStatusLabels: Record<string, string> = {
@@ -549,6 +550,16 @@ export function LeaseDialog({ open, onOpenChange, lease, defaultTenantId, defaul
                 </div>
               )}
             </div>
+
+            {lease && (
+              <>
+                <Separator />
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Documents</h4>
+                  <LeaseDocumentUpload leaseId={lease.id} />
+                </div>
+              </>
+            )}
 
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
