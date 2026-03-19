@@ -20,16 +20,37 @@ export async function createLease(
 
     const db = supabase as any;
 
-    // Extract property_id (not stored on leases table)
-    const { property_id, ...leaseData } = parsed.data;
+    // Extract fields not stored on leases table
+    const { property_id, tenant_ids, ...leaseData } = parsed.data;
+
+    // For month-to-month leases, ensure end_date is null
+    if (leaseData.lease_type === 'month_to_month') {
+      leaseData.end_date = undefined as any;
+    }
 
     const { data, error } = await db
       .from('leases')
-      .insert({ ...leaseData, org_id: orgId })
+      .insert({
+        ...leaseData,
+        org_id: orgId,
+        end_date: leaseData.end_date || null,
+      })
       .select('id')
       .single();
 
     if (error) return { success: false, error: error.message };
+
+    // Insert lease_tenants junction rows
+    const leaseTenantsRows = tenant_ids.map((tid: string) => ({
+      lease_id: data.id,
+      tenant_id: tid,
+    }));
+
+    const { error: tenantError } = await db
+      .from('lease_tenants')
+      .insert(leaseTenantsRows);
+
+    if (tenantError) return { success: false, error: tenantError.message };
 
     // Unit occupancy sync: if lease is active, mark unit as occupied
     if (parsed.data.status === 'active') {

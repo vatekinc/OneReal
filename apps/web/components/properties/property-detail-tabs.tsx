@@ -150,10 +150,14 @@ function PropertyLeases({ propertyId }: { propertyId: string }) {
               {leases.map((lease: any) => (
                 <TableRow key={lease.id}>
                   <TableCell>
-                    {lease.tenants ? (
-                      <Link href={`/contacts/tenants/${lease.tenant_id}`} className="text-primary hover:underline">
-                        {lease.tenants.first_name} {lease.tenants.last_name}
-                      </Link>
+                    {lease.lease_tenants?.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {lease.lease_tenants.map((lt: any) => (
+                          <Link key={lt.tenant_id} href={`/contacts/tenants/${lt.tenant_id}`} className="text-primary hover:underline text-sm">
+                            {lt.tenants?.first_name} {lt.tenants?.last_name}
+                          </Link>
+                        )).reduce((prev: any, curr: any, i: number) => i === 0 ? [curr] : [...prev, <span key={`sep-${i}`} className="text-muted-foreground">,</span>, curr], [])}
+                      </div>
                     ) : '\u2014'}
                   </TableCell>
                   <TableCell>{lease.units?.unit_number ?? '\u2014'}</TableCell>

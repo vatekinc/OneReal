@@ -10,7 +10,7 @@ export function useTenantInvoices(filter: 'open' | 'paid' | 'all' = 'all') {
       const supabase = createClient();
       let query = (supabase as any)
         .from('invoices')
-        .select('*, leases(tenant_id, units(unit_number, properties(name)))')
+        .select('*, leases(lease_tenants(tenant_id), units(unit_number, properties(name)))')
         .order('due_date', { ascending: false });
 
       if (filter === 'open') {

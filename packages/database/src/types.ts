@@ -364,7 +364,7 @@ export type Database = {
           id: string;
           org_id: string;
           unit_id: string;
-          tenant_id: string;
+          lease_type: string;
           start_date: string | null;
           end_date: string | null;
           rent_amount: number | null;
@@ -372,6 +372,13 @@ export type Database = {
           payment_due_day: number | null;
           status: string | null;
           terms: Json;
+          auto_month_to_month: boolean;
+          late_fee_type: string | null;
+          late_fee_amount: number | null;
+          late_fee_grace_days: number | null;
+          renewal_status: string | null;
+          renewal_notes: string | null;
+          renewed_from_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -379,7 +386,7 @@ export type Database = {
           id?: string;
           org_id: string;
           unit_id: string;
-          tenant_id: string;
+          lease_type?: string;
           start_date?: string | null;
           end_date?: string | null;
           rent_amount?: number | null;
@@ -387,6 +394,10 @@ export type Database = {
           payment_due_day?: number | null;
           status?: string | null;
           terms?: Json;
+          auto_month_to_month?: boolean;
+          late_fee_type?: string | null;
+          late_fee_amount?: number | null;
+          late_fee_grace_days?: number | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -394,7 +405,7 @@ export type Database = {
           id?: string;
           org_id?: string;
           unit_id?: string;
-          tenant_id?: string;
+          lease_type?: string;
           start_date?: string | null;
           end_date?: string | null;
           rent_amount?: number | null;
@@ -402,8 +413,33 @@ export type Database = {
           payment_due_day?: number | null;
           status?: string | null;
           terms?: Json;
+          auto_month_to_month?: boolean;
+          late_fee_type?: string | null;
+          late_fee_amount?: number | null;
+          late_fee_grace_days?: number | null;
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      lease_tenants: {
+        Row: {
+          id: string;
+          lease_id: string;
+          tenant_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          lease_id: string;
+          tenant_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          lease_id?: string;
+          tenant_id?: string;
+          created_at?: string;
         };
         Relationships: [];
       };

@@ -40,15 +40,37 @@ export async function updateLease(
       }
     }
 
-    // Extract property_id (not stored on leases table)
-    const { property_id, ...leaseData } = parsed.data;
+    // Extract fields not stored on leases table
+    const { property_id, tenant_ids, ...leaseData } = parsed.data;
+
+    // For month-to-month leases, ensure end_date is null
+    if (leaseData.lease_type === 'month_to_month') {
+      leaseData.end_date = undefined as any;
+    }
 
     const { error } = await db
       .from('leases')
-      .update(leaseData)
+      .update({
+        ...leaseData,
+        end_date: leaseData.end_date || null,
+      })
       .eq('id', id);
 
     if (error) return { success: false, error: error.message };
+
+    // Sync lease_tenants: delete old, insert new
+    await db.from('lease_tenants').delete().eq('lease_id', id);
+
+    const leaseTenantsRows = tenant_ids.map((tid: string) => ({
+      lease_id: id,
+      tenant_id: tid,
+    }));
+
+    const { error: tenantError } = await db
+      .from('lease_tenants')
+      .insert(leaseTenantsRows);
+
+    if (tenantError) return { success: false, error: tenantError.message };
 
     // Unit occupancy sync
     if (parsed.data.status === 'active') {

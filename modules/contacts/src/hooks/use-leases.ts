@@ -18,21 +18,28 @@ export function useLeases(filters: LeaseFilters) {
       const supabase = createClient();
       let query = (supabase as any)
         .from('leases')
-        .select('*, tenants(first_name, last_name), units(unit_number, property_id, properties(name))')
+        .select('*, lease_tenants(tenant_id, tenants(id, first_name, last_name)), units(unit_number, property_id, properties(name))')
         .eq('org_id', filters.orgId)
         .order('start_date', { ascending: false });
 
-      if (filters.tenantId) query = query.eq('tenant_id', filters.tenantId);
       if (filters.unitId) query = query.eq('unit_id', filters.unitId);
       if (filters.status) query = query.eq('status', filters.status);
 
       const { data, error } = await query;
       if (error) throw error;
 
-      // Client-side property filtering (since property_id is on units, not leases)
       let result = data ?? [];
+
+      // Client-side property filtering (since property_id is on units, not leases)
       if (filters.propertyId) {
         result = result.filter((lease: any) => lease.units?.property_id === filters.propertyId);
+      }
+
+      // Client-side tenant filtering (through junction table)
+      if (filters.tenantId) {
+        result = result.filter((lease: any) =>
+          lease.lease_tenants?.some((lt: any) => lt.tenant_id === filters.tenantId)
+        );
       }
 
       // Compute displayStatus for month-to-month detection (read-only, no DB writes)
@@ -40,12 +47,10 @@ export function useLeases(filters: LeaseFilters) {
       result = result.map((lease: any) => {
         let displayStatus = lease.status;
 
-        if (lease.status === 'active' && lease.end_date && lease.end_date < today) {
-          if (lease.auto_month_to_month) {
-            displayStatus = 'month_to_month';
-          } else {
-            displayStatus = 'expired';
-          }
+        if (lease.lease_type === 'month_to_month') {
+          displayStatus = 'month_to_month';
+        } else if (lease.status === 'active' && lease.end_date && lease.end_date < today) {
+          displayStatus = 'expired';
         }
 
         return { ...lease, displayStatus };

@@ -11,13 +11,15 @@ export async function deleteTenant(id: string): Promise<ActionResult> {
 
     const db = supabase as any;
 
-    // Check for active leases
-    const { data: activeLeases } = await db
-      .from('leases')
-      .select('id')
+    // Check for active leases via junction table
+    const { data: activeLeaseTenants } = await db
+      .from('lease_tenants')
+      .select('lease_id, leases!inner(status)')
       .eq('tenant_id', id)
-      .eq('status', 'active')
+      .eq('leases.status', 'active')
       .limit(1);
+
+    const activeLeases = activeLeaseTenants;
 
     if (activeLeases && activeLeases.length > 0) {
       return { success: false, error: 'Tenant has active leases. Terminate or expire leases first.' };

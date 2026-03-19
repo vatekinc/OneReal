@@ -36,7 +36,7 @@ export async function generateInvoices(
     // 1. Fetch active + month_to_month leases
     const { data: leases, error: leaseError } = await db
       .from('leases')
-      .select('id, tenant_id, unit_id, rent_amount, payment_due_day, end_date, auto_month_to_month, late_fee_type, late_fee_amount, late_fee_grace_days, units(property_id)')
+      .select('id, unit_id, rent_amount, payment_due_day, end_date, auto_month_to_month, late_fee_type, late_fee_amount, late_fee_grace_days, lease_type, units(property_id), lease_tenants(tenant_id)')
       .eq('org_id', orgId)
       .in('status', ['active', 'month_to_month']);
 
@@ -73,7 +73,7 @@ export async function generateInvoices(
     // Re-fetch to get updated statuses (some may now be expired)
     const { data: activeLeases } = await db
       .from('leases')
-      .select('id, tenant_id, unit_id, rent_amount, payment_due_day, units(property_id)')
+      .select('id, unit_id, rent_amount, payment_due_day, units(property_id), lease_tenants(tenant_id)')
       .eq('org_id', orgId)
       .in('status', ['active', 'month_to_month']);
 
@@ -151,6 +151,9 @@ export async function generateInvoices(
       const safeDay = Math.min(dueDay, maxDay);
       const dueDate = `${year}-${String(month).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
 
+      // Get first tenant from junction table
+      const leaseTenantId = lease.lease_tenants?.[0]?.tenant_id ?? null;
+
       if (!propertyId) {
         skipped++;
         skipReasons.push(`Lease ${lease.id}: missing property`);
@@ -162,7 +165,7 @@ export async function generateInvoices(
         if (!existingRentInvoices.has(lease.id)) {
           const result = await insertInvoiceRecord(db, orgId, {
             lease_id: lease.id,
-            tenant_id: lease.tenant_id,
+            tenant_id: leaseTenantId,
             property_id: propertyId,
             unit_id: lease.unit_id,
             amount: lease.rent_amount,
@@ -192,7 +195,7 @@ export async function generateInvoices(
 
           const result = await insertInvoiceRecord(db, orgId, {
             lease_id: lease.id,
-            tenant_id: lease.tenant_id,
+            tenant_id: leaseTenantId,
             property_id: propertyId,
             unit_id: lease.unit_id,
             amount: charge.amount,
@@ -216,7 +219,7 @@ export async function generateInvoices(
 
           const result = await insertInvoiceRecord(db, orgId, {
             lease_id: lease.id,
-            tenant_id: lease.tenant_id,
+            tenant_id: leaseTenantId,
             property_id: propertyId,
             unit_id: lease.unit_id,
             amount: charge.amount,
@@ -236,7 +239,7 @@ export async function generateInvoices(
 
           const result = await insertInvoiceRecord(db, orgId, {
             lease_id: lease.id,
-            tenant_id: lease.tenant_id,
+            tenant_id: leaseTenantId,
             property_id: propertyId,
             unit_id: lease.unit_id,
             amount: charge.amount,
@@ -269,7 +272,7 @@ async function insertInvoiceRecord(
   orgId: string,
   data: {
     lease_id: string;
-    tenant_id: string;
+    tenant_id: string | null;
     property_id: string;
     unit_id: string;
     amount: number;

@@ -13,13 +13,14 @@ import { useProperties } from '@onereal/portfolio';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
-  Input, Button, Separator,
+  Input, Button, Separator, Badge,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
   Switch,
 } from '@onereal/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, X, Check, ChevronsUpDown } from 'lucide-react';
 import type { LeaseCharge } from '@onereal/types';
 
 const leaseStatusLabels: Record<string, string> = {
@@ -68,17 +69,23 @@ export function LeaseDialog({ open, onOpenChange, lease, defaultTenantId, defaul
   const [newChargeAmount, setNewChargeAmount] = useState('');
   const [newChargeFrequency, setNewChargeFrequency] = useState<'monthly' | 'yearly' | 'one_time'>('monthly');
 
+  // Extract tenant_ids from lease_tenants junction data when editing
+  const leaseDefaultTenantIds = useMemo(() => {
+    if (!lease) return defaultTenantId ? [defaultTenantId] : [];
+    return (lease.lease_tenants ?? []).map((lt: any) => lt.tenant_id);
+  }, [lease, defaultTenantId]);
+
   const defaultValues: LeaseFormValues = {
     property_id: defaultPropertyId ?? '',
     unit_id: '',
-    tenant_id: defaultTenantId ?? '',
+    tenant_ids: defaultTenantId ? [defaultTenantId] : [],
+    lease_type: 'fixed',
     start_date: '',
     end_date: '',
     rent_amount: undefined as unknown as number,
     deposit_amount: 0,
     payment_due_day: 1,
     status: 'draft',
-    auto_month_to_month: true,
     late_fee_type: null,
     late_fee_amount: null,
     late_fee_grace_days: null,
@@ -89,14 +96,14 @@ export function LeaseDialog({ open, onOpenChange, lease, defaultTenantId, defaul
     defaultValues: lease ? {
       property_id: lease.units?.property_id ?? '',
       unit_id: lease.unit_id,
-      tenant_id: lease.tenant_id,
+      tenant_ids: leaseDefaultTenantIds,
+      lease_type: lease.lease_type ?? 'fixed',
       start_date: lease.start_date ?? '',
       end_date: lease.end_date ?? '',
       rent_amount: lease.rent_amount ?? 0,
       deposit_amount: lease.deposit_amount ?? 0,
       payment_due_day: lease.payment_due_day ?? 1,
       status: lease.status === 'month_to_month' ? 'active' : (lease.status as LeaseFormValues['status']),
-      auto_month_to_month: lease.auto_month_to_month ?? true,
       late_fee_type: lease.late_fee_type ?? null,
       late_fee_amount: lease.late_fee_amount ?? null,
       late_fee_grace_days: lease.late_fee_grace_days ?? null,
@@ -112,14 +119,14 @@ export function LeaseDialog({ open, onOpenChange, lease, defaultTenantId, defaul
       form.reset(lease ? {
         property_id: lease.units?.property_id ?? '',
         unit_id: lease.unit_id,
-        tenant_id: lease.tenant_id,
+        tenant_ids: leaseDefaultTenantIds,
+        lease_type: lease.lease_type ?? 'fixed',
         start_date: lease.start_date ?? '',
         end_date: lease.end_date ?? '',
         rent_amount: lease.rent_amount ?? 0,
         deposit_amount: lease.deposit_amount ?? 0,
         payment_due_day: lease.payment_due_day ?? 1,
         status: lease.status === 'month_to_month' ? 'active' : (lease.status as LeaseFormValues['status']),
-        auto_month_to_month: lease.auto_month_to_month ?? true,
         late_fee_type: lease.late_fee_type ?? null,
         late_fee_amount: lease.late_fee_amount ?? null,
         late_fee_grace_days: lease.late_fee_grace_days ?? null,
@@ -134,13 +141,29 @@ export function LeaseDialog({ open, onOpenChange, lease, defaultTenantId, defaul
   );
   const units = (selectedProperty as any)?.units ?? [];
 
+  const leaseType = form.watch('lease_type');
   const lateFeeType = form.watch('late_fee_type');
+  const selectedTenantIds = form.watch('tenant_ids') ?? [];
 
   useEffect(() => {
     if (units.length === 1 && form.getValues('unit_id') !== units[0].id) {
       form.setValue('unit_id', units[0].id);
     }
   }, [units, form]);
+
+  function toggleTenant(tenantId: string) {
+    const current = form.getValues('tenant_ids') ?? [];
+    if (current.includes(tenantId)) {
+      form.setValue('tenant_ids', current.filter((id: string) => id !== tenantId), { shouldValidate: true });
+    } else {
+      form.setValue('tenant_ids', [...current, tenantId], { shouldValidate: true });
+    }
+  }
+
+  function removeTenant(tenantId: string) {
+    const current = form.getValues('tenant_ids') ?? [];
+    form.setValue('tenant_ids', current.filter((id: string) => id !== tenantId), { shouldValidate: true });
+  }
 
   function handleAddPendingCharge() {
     if (!newChargeName.trim() || !newChargeAmount) return;
@@ -258,20 +281,82 @@ export function LeaseDialog({ open, onOpenChange, lease, defaultTenantId, defaul
                   </FormItem>
                 )} />
               )}
-              <FormField control={form.control} name="tenant_id" render={({ field }) => (
+
+              {/* Multi-Select Tenants */}
+              <FormField control={form.control} name="tenant_ids" render={() => (
                 <FormItem className="sm:col-span-2">
-                  <FormLabel>Tenant *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Select tenant" /></SelectTrigger></FormControl>
+                  <FormLabel>Tenants *</FormLabel>
+                  <div className="space-y-2">
+                    {/* Selected tenants as badges */}
+                    {selectedTenantIds.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {selectedTenantIds.map((tid: string) => {
+                          const t = tenants.find((t: any) => t.id === tid);
+                          if (!t) return null;
+                          return (
+                            <Badge key={tid} variant="secondary" className="gap-1 pr-1">
+                              {t.first_name} {t.last_name}
+                              <button
+                                type="button"
+                                className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5"
+                                onClick={() => removeTenant(tid)}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {/* Dropdown to add tenants */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button type="button" variant="outline" className="w-full justify-between text-sm font-normal">
+                          {selectedTenantIds.length === 0 ? 'Select tenants...' : `${selectedTenantIds.length} selected`}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]" align="start">
+                        {tenants.length === 0 && (
+                          <DropdownMenuItem disabled>No tenants found</DropdownMenuItem>
+                        )}
+                        {tenants.map((t: any) => {
+                          const isSelected = selectedTenantIds.includes(t.id);
+                          return (
+                            <DropdownMenuItem
+                              key={t.id}
+                              onSelect={(e) => {
+                                e.preventDefault();
+                                toggleTenant(t.id);
+                              }}
+                            >
+                              <Check className={`mr-2 h-4 w-4 ${isSelected ? 'opacity-100' : 'opacity-0'}`} />
+                              {t.first_name} {t.last_name}
+                            </DropdownMenuItem>
+                          );
+                        })}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              {/* Lease Type */}
+              <FormField control={form.control} name="lease_type" render={({ field }) => (
+                <FormItem className="sm:col-span-2">
+                  <FormLabel>Lease Type *</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                     <SelectContent>
-                      {tenants.map((t: any) => (
-                        <SelectItem key={t.id} value={t.id}>{t.first_name} {t.last_name}</SelectItem>
-                      ))}
+                      <SelectItem value="fixed">Fixed</SelectItem>
+                      <SelectItem value="month_to_month">Month-to-Month</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )} />
+
               <FormField control={form.control} name="start_date" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Start Date *</FormLabel>
@@ -279,13 +364,15 @@ export function LeaseDialog({ open, onOpenChange, lease, defaultTenantId, defaul
                   <FormMessage />
                 </FormItem>
               )} />
-              <FormField control={form.control} name="end_date" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>End Date *</FormLabel>
-                  <FormControl><Input type="date" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
+              {leaseType === 'fixed' && (
+                <FormField control={form.control} name="end_date" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>End Date *</FormLabel>
+                    <FormControl><Input type="date" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              )}
               <FormField control={form.control} name="rent_amount" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Monthly Rent *</FormLabel>
@@ -322,19 +409,6 @@ export function LeaseDialog({ open, onOpenChange, lease, defaultTenantId, defaul
                 </FormItem>
               )} />
             </div>
-
-            {/* Auto Month-to-Month Toggle */}
-            <FormField control={form.control} name="auto_month_to_month" render={({ field }) => (
-              <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                <div>
-                  <FormLabel className="text-sm font-medium">Auto Month-to-Month</FormLabel>
-                  <p className="text-xs text-muted-foreground">Automatically convert to month-to-month when lease expires</p>
-                </div>
-                <FormControl>
-                  <Switch checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-              </FormItem>
-            )} />
 
             <Separator />
 
