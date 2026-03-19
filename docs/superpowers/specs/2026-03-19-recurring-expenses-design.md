@@ -1,0 +1,200 @@
+# Recurring Expenses
+
+## Overview
+
+Allow property managers to set up recurring expense templates per property (e.g., monthly mortgage, yearly insurance) and generate actual expense records for a given month with a single click. Mirrors the existing `lease_charges` + `generate-invoices` pattern used for rent.
+
+## Database
+
+### New table: `recurring_expenses`
+
+```sql
+CREATE TABLE public.recurring_expenses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID NOT NULL REFERENCES public.organizations(id),
+  property_id UUID NOT NULL REFERENCES public.properties(id) ON DELETE CASCADE,
+  unit_id UUID REFERENCES public.units(id) ON DELETE SET NULL,
+  expense_type TEXT NOT NULL CHECK (expense_type IN (
+    'mortgage', 'maintenance', 'repairs', 'utilities', 'insurance',
+    'taxes', 'management', 'advertising', 'legal', 'hoa', 'home_warranty', 'other'
+  )),
+  amount DECIMAL(10,2) NOT NULL,
+  frequency TEXT NOT NULL CHECK (frequency IN ('monthly', 'yearly')),
+  description TEXT DEFAULT '',
+  provider_id UUID REFERENCES public.service_providers(id) ON DELETE SET NULL,
+  start_date DATE NOT NULL,
+  end_date DATE,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_recurring_expenses_org ON public.recurring_expenses(org_id);
+CREATE INDEX idx_recurring_expenses_property ON public.recurring_expenses(property_id);
+```
+
+RLS policies: org-scoped, same pattern as `lease_charges`:
+- Users can SELECT where `org_id IN (SELECT get_user_org_ids())`
+- Managers can INSERT/UPDATE/DELETE where `org_id IN (SELECT get_user_managed_org_ids())`
+
+### Extend `expenses` table
+
+```sql
+ALTER TABLE public.expenses ADD COLUMN IF NOT EXISTS recurring_expense_id UUID REFERENCES public.recurring_expenses(id) ON DELETE SET NULL;
+```
+
+This column links generated expenses back to their template for idempotency checks. Null for manually created expenses.
+
+## Server Actions
+
+All in `modules/accounting/src/actions/`.
+
+### `create-recurring-expense.ts`
+
+- Input: `orgId: string`, validated form values
+- Schema: `recurring_expense_schema` (property_id, unit_id, expense_type, amount, frequency, description, provider_id, start_date, end_date)
+- Inserts into `recurring_expenses` table
+- Returns `ActionResult<{ id: string }>`
+
+### `update-recurring-expense.ts`
+
+- Input: `id: string`, validated form values
+- Updates the recurring expense template
+- Returns `ActionResult`
+
+### `delete-recurring-expense.ts`
+
+- Input: `id: string`
+- Deletes from `recurring_expenses` table (does NOT delete already-generated expenses)
+- Returns `ActionResult`
+
+### `generate-expenses.ts`
+
+- Input: `orgId: string`, `month: number`, `year: number`
+- Logic:
+  1. Fetch all active `recurring_expenses` for the org where `start_date <= last day of target month` and (`end_date` is null or `end_date >= first day of target month`)
+  2. For each template:
+     - **Monthly:** always eligible
+     - **Yearly:** only if target month matches the month of `start_date`
+  3. Check idempotency: skip if an expense with matching `recurring_expense_id` already exists for that month/year (check `transaction_date` falls within the target month)
+  4. Create expense records with:
+     - `transaction_date`: 1st of target month
+     - `recurring_expense_id`: link to template
+     - All other fields copied from template (property_id, unit_id, expense_type, amount, description, provider_id)
+  5. Return `ActionResult<{ generated: number; skipped: number }>`
+
+### `preview-generate-expenses.ts`
+
+- Input: `orgId: string`, `month: number`, `year: number`
+- Same filtering logic as `generate-expenses` but only returns the count of eligible templates (no inserts)
+- Returns `ActionResult<{ eligible: number }>`
+
+## Hooks
+
+### `use-recurring-expenses.ts`
+
+In `modules/accounting/src/hooks/`:
+
+- Query hook: fetches all recurring expenses for a given `propertyId`
+- Joins `service_providers(name)` for vendor display
+- Query key: `['recurring-expenses', propertyId]`
+- Returns `{ data: RecurringExpense[], isLoading }`
+
+## TypeScript Types
+
+Add to `packages/types/src/models.ts`:
+
+```typescript
+export interface RecurringExpense {
+  id: string;
+  org_id: string;
+  property_id: string;
+  unit_id: string | null;
+  expense_type: string;
+  amount: number;
+  frequency: 'monthly' | 'yearly';
+  description: string;
+  provider_id: string | null;
+  start_date: string;
+  end_date: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+Update `Expense` interface to add `recurring_expense_id: string | null`.
+
+## UI Components
+
+### 1. Recurring Expenses Tab on Property Detail Page
+
+**File:** `apps/web/components/properties/property-detail-tabs.tsx`
+
+Add a new **"Recurring"** tab alongside Overview, Units, Images, Leases. Renders a `PropertyRecurringExpenses` component that:
+
+- Shows a table of recurring expense templates for the property
+- Columns: Type, Amount, Frequency, Vendor, Status (active/inactive), Actions (edit/delete)
+- "Add Recurring Expense" button opens a dialog
+- Edit/delete inline actions
+
+### 2. Recurring Expense Dialog
+
+**File:** `apps/web/components/accounting/recurring-expense-dialog.tsx`
+
+Dialog for creating/editing a recurring expense template:
+
+- Fields: expense type (select), amount (number), frequency (monthly/yearly), vendor (select from service_providers), description (text), start date (date), end date (optional date)
+- Property is pre-set from the property detail page context (not user-selectable)
+- Unit select only shown if property has multiple units
+- Zod validation via `recurring_expense_schema`
+
+### 3. Generate Expenses Dialog
+
+**File:** `apps/web/components/accounting/generate-expenses-dialog.tsx`
+
+Dialog triggered from the Outgoing page header:
+
+- Month/year picker (defaults to current month)
+- Shows preview count: "X recurring expenses to generate for March 2026"
+- "Generate" button creates expense records
+- Success toast: "Generated X expenses (Y already existed)"
+- Invalidates `['expenses']` query cache
+
+### 4. Outgoing Page Enhancement
+
+**File:** `apps/web/app/(dashboard)/accounting/outgoing/page.tsx`
+
+- Add "Generate Expenses" button next to "New Expense" in the header
+- Opens `GenerateExpensesDialog`
+
+## Files to Create/Modify
+
+| File | Action |
+|------|--------|
+| `supabase/migrations/20260319000002_recurring_expenses.sql` | NEW - table + RLS + expenses column |
+| `packages/types/src/models.ts` | MODIFY - add RecurringExpense, update Expense |
+| `modules/accounting/src/schemas/recurring-expense-schema.ts` | NEW - Zod schema |
+| `modules/accounting/src/actions/create-recurring-expense.ts` | NEW |
+| `modules/accounting/src/actions/update-recurring-expense.ts` | NEW |
+| `modules/accounting/src/actions/delete-recurring-expense.ts` | NEW |
+| `modules/accounting/src/actions/generate-expenses.ts` | NEW |
+| `modules/accounting/src/actions/preview-generate-expenses.ts` | NEW |
+| `modules/accounting/src/hooks/use-recurring-expenses.ts` | NEW |
+| `modules/accounting/src/index.ts` | MODIFY - export hook |
+| `apps/web/components/accounting/recurring-expense-dialog.tsx` | NEW |
+| `apps/web/components/accounting/generate-expenses-dialog.tsx` | NEW |
+| `apps/web/components/properties/property-detail-tabs.tsx` | MODIFY - add Recurring tab |
+| `apps/web/app/(dashboard)/accounting/outgoing/page.tsx` | MODIFY - add Generate button |
+
+## Acceptance Criteria
+
+1. Create a recurring expense template (monthly mortgage) on a property -> record appears in recurring_expenses table
+2. Edit/delete recurring expense templates
+3. Generate expenses for a month -> expense records created with correct amounts and linked via `recurring_expense_id`
+4. Re-running generation for the same month -> skips already-generated expenses (idempotent)
+5. Yearly expenses only generate in their start month
+6. Inactive templates are skipped during generation
+7. Templates with end_date in the past are skipped
+8. Preview shows correct count before generation
+9. Generated expenses appear in the Outgoing page expense list
