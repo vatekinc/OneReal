@@ -25,6 +25,7 @@ CREATE TABLE public.recurring_expenses (
   start_date DATE NOT NULL,
   end_date DATE,
   is_active BOOLEAN NOT NULL DEFAULT true,
+  CHECK (end_date IS NULL OR end_date >= start_date),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -35,7 +36,7 @@ CREATE INDEX idx_recurring_expenses_property ON public.recurring_expenses(proper
 -- Auto-update updated_at
 CREATE TRIGGER handle_recurring_expenses_updated_at
   BEFORE UPDATE ON public.recurring_expenses
-  FOR EACH ROW EXECUTE FUNCTION moddatetime('updated_at');
+  FOR EACH ROW EXECUTE FUNCTION extensions.moddatetime(updated_at);
 
 -- RLS
 ALTER TABLE public.recurring_expenses ENABLE ROW LEVEL SECURITY;
@@ -98,7 +99,7 @@ All in `modules/accounting/src/actions/`.
 
 ### `generate-expenses.ts`
 
-- Input: `orgId: string`, `month: number`, `year: number`
+- Input: `orgId: string`, `month: number` (1-12), `year: number` (validated inline: reject if month < 1 or month > 12)
 - Logic:
   1. Fetch all `recurring_expenses` for the org where `is_active = true` AND `start_date <= last day of target month` AND (`end_date` is null or `end_date >= first day of target month`)
   2. For each template:
@@ -161,6 +162,8 @@ export interface RecurringExpense {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  // Joined by hook, not stored in table:
+  service_providers?: { name: string } | null;
 }
 ```
 
@@ -221,6 +224,7 @@ Dialog triggered from the Outgoing page header:
 - **Start date in the future:** Template is skipped for months before `start_date`. The `start_date <= last day of target month` check handles this.
 - **Multiple generations in same month:** Idempotent via `generated_for_period` column and the partial unique index. Even if a user edits the `transaction_date` of a generated expense, the idempotency check still works because it uses `generated_for_period`, not `transaction_date`. Concurrent requests are also safe due to the DB-level unique constraint.
 - **Service provider deleted:** `ON DELETE SET NULL` sets `provider_id` to null on the template. Future generations produce expenses without a vendor link. Already-generated expenses retain their original `provider_id` (also set null by cascade).
+- **Property deleted:** `ON DELETE CASCADE` on `property_id` removes all recurring expense templates for that property. Already-generated expenses are also cascade-deleted via the same FK on the `expenses` table. This is intentional — a deleted property has no use for its expense history.
 
 ## Files to Create/Modify
 
