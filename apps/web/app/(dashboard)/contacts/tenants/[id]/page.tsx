@@ -12,7 +12,8 @@ import {
   Button, Card, CardContent, CardHeader, CardTitle, Badge,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@onereal/ui';
-import { ArrowLeft, Pencil, Plus, Trash2, Mail, Phone, AlertTriangle, Send, CheckCircle, Clock } from 'lucide-react';
+import { ArrowLeft, Pencil, Plus, Trash2, Mail, Phone, AlertTriangle, Send, CheckCircle, Clock, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -206,6 +207,11 @@ export default function TenantDetailPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
+                        <Link href={`/contacts/leases/${lease.id}`}>
+                          <Button variant="ghost" size="icon">
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </Link>
                         <Button variant="ghost" size="icon" onClick={() => { setEditingLease(lease); setLeaseDialogOpen(true); }}>
                           <Pencil className="h-4 w-4" />
                         </Button>

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, Badge, StatCard, Button,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@onereal/ui';
-import { DoorOpen, Percent, DollarSign, MapPin, BedDouble, Bath, Ruler, Pencil, Plus, Trash2 } from 'lucide-react';
+import { DoorOpen, Percent, DollarSign, MapPin, BedDouble, Bath, Ruler, Pencil, Plus, Trash2, ExternalLink } from 'lucide-react';
 import type { Property, Unit, PropertyImage } from '@onereal/types';
 import { UnitTable } from './unit-table';
 import { ImageGallery } from './image-gallery';
@@ -173,6 +173,11 @@ function PropertyLeases({ propertyId }: { propertyId: string }) {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
+                      <Link href={`/contacts/leases/${lease.id}`}>
+                        <Button variant="ghost" size="icon">
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </Link>
                       <Button variant="ghost" size="icon" onClick={() => { setEditingLease(lease); setLeaseDialogOpen(true); }}>
                         <Pencil className="h-4 w-4" />
                       </Button>
