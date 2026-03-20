@@ -49,6 +49,7 @@ export function InvoiceDialog({ open, onOpenChange, invoice, defaultDirection }:
       amount: invoice.amount,
       due_date: invoice.due_date,
       issued_date: invoice.issued_date,
+      expense_type: invoice.expense_type ?? undefined,
     } : {
       direction: defaultDirection,
       tenant_id: undefined,
@@ -59,6 +60,7 @@ export function InvoiceDialog({ open, onOpenChange, invoice, defaultDirection }:
       amount: undefined as unknown as number,
       due_date: '',
       issued_date: new Date().toISOString().split('T')[0],
+      expense_type: undefined,
     },
   });
 
@@ -74,6 +76,7 @@ export function InvoiceDialog({ open, onOpenChange, invoice, defaultDirection }:
         amount: invoice.amount,
         due_date: invoice.due_date,
         issued_date: invoice.issued_date,
+        expense_type: invoice.expense_type ?? undefined,
       } : {
         direction: defaultDirection,
         tenant_id: undefined,
@@ -84,6 +87,7 @@ export function InvoiceDialog({ open, onOpenChange, invoice, defaultDirection }:
         amount: undefined as unknown as number,
         due_date: '',
         issued_date: new Date().toISOString().split('T')[0],
+        expense_type: undefined,
       });
     }
   }, [open, invoice, form, defaultDirection]);
@@ -213,6 +217,32 @@ export function InvoiceDialog({ open, onOpenChange, invoice, defaultDirection }:
                             {p.name}{p.company_name ? ` (${p.company_name})` : ''}
                           </SelectItem>
                         ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              )}
+
+              {direction === 'payable' && (
+                <FormField control={form.control} name="expense_type" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Expense Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        <SelectItem value="mortgage">Mortgage</SelectItem>
+                        <SelectItem value="maintenance">Maintenance</SelectItem>
+                        <SelectItem value="repairs">Repairs</SelectItem>
+                        <SelectItem value="utilities">Utilities</SelectItem>
+                        <SelectItem value="insurance">Insurance</SelectItem>
+                        <SelectItem value="taxes">Taxes</SelectItem>
+                        <SelectItem value="management">Management</SelectItem>
+                        <SelectItem value="advertising">Advertising</SelectItem>
+                        <SelectItem value="legal">Legal</SelectItem>
+                        <SelectItem value="hoa">HOA</SelectItem>
+                        <SelectItem value="home_warranty">Home Warranty</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
