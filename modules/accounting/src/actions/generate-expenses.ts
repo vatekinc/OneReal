@@ -3,11 +3,6 @@
 import { createServerSupabaseClient } from '@onereal/database/server';
 import type { ActionResult } from '@onereal/types';
 
-const monthNames = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
 /**
  * Fetch eligible recurring expense templates for a given org + month/year.
  * Shared logic between generate and preview.
@@ -46,7 +41,7 @@ async function fetchEligibleTemplates(
 }
 
 /**
- * Check which templates already have generated expenses for this period.
+ * Check which templates already have generated invoices for this period.
  * Returns a Set of recurring_expense_id values that should be skipped.
  */
 async function fetchExistingForPeriod(
@@ -57,7 +52,7 @@ async function fetchExistingForPeriod(
   if (templateIds.length === 0) return new Set();
 
   const { data: existing } = await db
-    .from('expenses')
+    .from('invoices')
     .select('recurring_expense_id')
     .in('recurring_expense_id', templateIds)
     .eq('generated_for_period', period);
@@ -79,7 +74,7 @@ export async function generateExpenses(
 
     const db = supabase as any;
     const period = `${year}-${String(month).padStart(2, '0')}`;
-    const transactionDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const dueDate = `${year}-${String(month).padStart(2, '0')}-01`;
 
     const eligible = await fetchEligibleTemplates(db, orgId, month, year);
     if (eligible.length === 0) {
@@ -98,15 +93,30 @@ export async function generateExpenses(
         continue;
       }
 
-      const { error: insertError } = await db.from('expenses').insert({
+      // Get next invoice number via RPC
+      const { data: invoiceNumber, error: rpcError } = await db.rpc(
+        'next_invoice_number',
+        { p_org_id: template.org_id }
+      );
+
+      if (rpcError) {
+        return { success: false, error: rpcError.message };
+      }
+
+      const { error: insertError } = await db.from('invoices').insert({
         org_id: template.org_id,
+        invoice_number: invoiceNumber,
+        direction: 'payable',
+        status: 'open',
         property_id: template.property_id,
         unit_id: template.unit_id,
-        expense_type: template.expense_type,
         amount: template.amount,
+        amount_paid: 0,
         description: template.description,
+        expense_type: template.expense_type,
         provider_id: template.provider_id,
-        transaction_date: transactionDate,
+        due_date: dueDate,
+        issued_date: dueDate,
         recurring_expense_id: template.id,
         generated_for_period: period,
       });
