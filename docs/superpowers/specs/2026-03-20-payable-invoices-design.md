@@ -38,21 +38,36 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_invoices_recurring_period
 -- Convert existing expense records to paid payable invoices.
 -- These represent money already spent, so status='paid' and amount_paid=amount.
 -- Uses next_invoice_number() to generate proper invoice numbers.
+-- Note: the expenses table does NOT have a provider_id column, so we look it up
+-- from the recurring_expenses template (if any). For manual expenses, provider_id is NULL.
+-- We also preserve original created_at/updated_at timestamps for audit trails.
 DO $$
 DECLARE
   exp RECORD;
   inv_number TEXT;
+  tmpl_provider_id UUID;
 BEGIN
   FOR exp IN SELECT * FROM public.expenses ORDER BY created_at ASC LOOP
     inv_number := public.next_invoice_number(exp.org_id);
+
+    -- Look up provider_id from the recurring expense template, if linked
+    IF exp.recurring_expense_id IS NOT NULL THEN
+      SELECT re.provider_id INTO tmpl_provider_id
+        FROM public.recurring_expenses re WHERE re.id = exp.recurring_expense_id;
+    ELSE
+      tmpl_provider_id := NULL;
+    END IF;
+
     INSERT INTO public.invoices (
       org_id, invoice_number, direction, status, property_id, unit_id,
       provider_id, description, amount, amount_paid, due_date, issued_date,
-      expense_type, recurring_expense_id, generated_for_period
+      expense_type, recurring_expense_id, generated_for_period,
+      created_at, updated_at
     ) VALUES (
       exp.org_id, inv_number, 'payable', 'paid', exp.property_id, exp.unit_id,
-      exp.provider_id, exp.description, exp.amount, exp.amount, exp.transaction_date, exp.transaction_date,
-      exp.expense_type, exp.recurring_expense_id, exp.generated_for_period
+      tmpl_provider_id, exp.description, exp.amount, exp.amount, exp.transaction_date, exp.transaction_date,
+      exp.expense_type, exp.recurring_expense_id, exp.generated_for_period,
+      exp.created_at, exp.updated_at
     );
   END LOOP;
 END $$;
@@ -117,12 +132,12 @@ expense_type: z.string().optional(),
 
 No validation constraint — it's optional and only relevant for payable invoices.
 
-### Existing actions (no changes needed)
+### Existing actions (no code changes needed, but depend on schema change)
 
-- `createInvoice`: already handles payable direction, just needs `expense_type` passed through
-- `updateInvoice`: already handles all invoice fields
-- `voidInvoice`: works on any invoice
-- `deleteInvoice`: works on any invoice
+- `createInvoice`: uses `...parsed.data` spread, so `expense_type` will pass through **only after** the `invoiceSchema` change above is applied. No code change to the action itself.
+- `updateInvoice`: same — uses `...parsed.data` spread, so `expense_type` passes through after the schema change.
+- `voidInvoice`: works on any invoice, no changes needed
+- `deleteInvoice`: works on any invoice, no changes needed
 - `recordPayment`: only needs the `expense_type` fix above
 
 ## TypeScript Types
@@ -149,7 +164,7 @@ Full rewrite to mirror the Incoming page structure but with `direction: 'payable
 - **Data source**: `useInvoices({ direction: 'payable', ... })` instead of `useExpenses()`
 - **Tabs**: Open | Paid | All (new, matches Incoming page)
 - **Table**: `InvoiceTable` component with `direction="payable"` (replaces custom expense table)
-- **Filters**: Search (searches description + invoice_number), Property filter (keeps existing), Vendor filter (new, replaces tenant filter concept)
+- **Filters**: Search (searches description + invoice_number), Property filter (keeps existing), Vendor filter (new — uses `vendorFilter` state variable wired to `useInvoices({ providerId: vendorFilter })`, loaded from `useProviders` hook, same pattern as tenant filter on the Incoming page)
 - **Date range buttons**: Keep existing This Month / This Year / 3yr / 5yr / All Time
 - **Action buttons**:
   - "Generate Bills" (replaces "Generate" — opens GenerateExpensesDialog)
@@ -168,6 +183,7 @@ Add `expense_type` field, shown only when `direction === 'payable'`:
 - Select dropdown with expense type options: Mortgage, Maintenance, Repairs, Utilities, Insurance, Taxes, Management, Advertising, Legal, HOA, Home Warranty, Other
 - Positioned after the Vendor field in the form layout
 - Optional field (bills can be created without categorization)
+- **Important**: Also add `expense_type` to the form's `defaultValues` (both the initial values and the `invoice` edit-mode values) and to the `useEffect` `form.reset()` block, so that editing an existing invoice preserves its expense type. Example: `expense_type: invoice?.expense_type ?? undefined`
 
 ### GenerateExpensesDialog (`apps/web/components/accounting/generate-expenses-dialog.tsx`)
 
