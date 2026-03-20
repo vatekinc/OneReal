@@ -75,7 +75,7 @@ export async function recordPayment(
           property_id: invoice.property_id,
           unit_id: invoice.unit_id || null,
           amount: parsed.data.amount,
-          expense_type: 'maintenance',
+          expense_type: invoice.expense_type || 'other',
           description: `Payment for ${invoice.invoice_number}`,
           transaction_date: parsed.data.payment_date,
           provider_id: invoice.provider_id || null,
