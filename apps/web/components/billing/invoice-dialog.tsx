@@ -146,7 +146,9 @@ export function InvoiceDialog({ open, onOpenChange, invoice, defaultDirection }:
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? 'Edit Invoice' : direction === 'receivable' ? 'New Invoice' : 'New Bill'}
+            {isEditing
+              ? (direction === 'receivable' ? 'Edit Invoice' : 'Edit Bill')
+              : (direction === 'receivable' ? 'New Invoice' : 'New Bill')}
           </DialogTitle>
         </DialogHeader>
         <Form {...form}>
