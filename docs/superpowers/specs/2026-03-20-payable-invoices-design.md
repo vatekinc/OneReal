@@ -38,26 +38,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_invoices_recurring_period
 -- Convert existing expense records to paid payable invoices.
 -- These represent money already spent, so status='paid' and amount_paid=amount.
 -- Uses next_invoice_number() to generate proper invoice numbers.
--- Note: the expenses table does NOT have a provider_id column, so we look it up
--- from the recurring_expenses template (if any). For manual expenses, provider_id is NULL.
--- We also preserve original created_at/updated_at timestamps for audit trails.
+-- Preserves original created_at/updated_at timestamps for audit trails.
+-- Note: provider_id exists on expenses (added in 20260315000007_contacts_tables.sql).
 DO $$
 DECLARE
   exp RECORD;
   inv_number TEXT;
-  tmpl_provider_id UUID;
 BEGIN
   FOR exp IN SELECT * FROM public.expenses ORDER BY created_at ASC LOOP
     inv_number := public.next_invoice_number(exp.org_id);
-
-    -- Look up provider_id from the recurring expense template, if linked
-    IF exp.recurring_expense_id IS NOT NULL THEN
-      SELECT re.provider_id INTO tmpl_provider_id
-        FROM public.recurring_expenses re WHERE re.id = exp.recurring_expense_id;
-    ELSE
-      tmpl_provider_id := NULL;
-    END IF;
-
     INSERT INTO public.invoices (
       org_id, invoice_number, direction, status, property_id, unit_id,
       provider_id, description, amount, amount_paid, due_date, issued_date,
@@ -65,7 +54,7 @@ BEGIN
       created_at, updated_at
     ) VALUES (
       exp.org_id, inv_number, 'payable', 'paid', exp.property_id, exp.unit_id,
-      tmpl_provider_id, exp.description, exp.amount, exp.amount, exp.transaction_date, exp.transaction_date,
+      exp.provider_id, exp.description, exp.amount, exp.amount, exp.transaction_date, exp.transaction_date,
       exp.expense_type, exp.recurring_expense_id, exp.generated_for_period,
       exp.created_at, exp.updated_at
     );
@@ -121,6 +110,8 @@ expense_type: invoice.expense_type || 'other',
 ```
 
 This ensures that when a payable invoice is paid, the auto-created expense record gets the correct expense type (e.g., 'mortgage' not 'maintenance').
+
+> **Ordering dependency**: The `expense_type` column must exist on the `invoices` table (via the database migration) before this code change takes effect correctly. If deployed before the migration, `invoice.expense_type` will be `undefined` and the fallback `|| 'other'` will produce `'other'` instead of `'maintenance'`. Apply the migration first.
 
 ### Add `expense_type` to `InvoiceDialog` schema
 
