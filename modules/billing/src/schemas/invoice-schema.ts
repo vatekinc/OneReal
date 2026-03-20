@@ -10,6 +10,7 @@ export const invoiceSchema = z.object({
   amount: z.coerce.number().positive('Amount must be positive'),
   due_date: z.string().min(1, 'Due date is required'),
   issued_date: z.string().optional(),
+  expense_type: z.string().optional(),
 });
 
 export type InvoiceFormValues = z.infer<typeof invoiceSchema>;
