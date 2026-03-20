@@ -1,6 +1,7 @@
 // Schemas (pure types + zod — safe for both client and server)
 export { incomeSchema, type IncomeFormValues } from './schemas/income-schema';
 export { expenseSchema, type ExpenseFormValues } from './schemas/expense-schema';
+export { recurringExpenseSchema, type RecurringExpenseFormValues } from './schemas/recurring-expense-schema';
 
 // Hooks (client-only)
 export { useIncome } from './hooks/use-income';
@@ -10,6 +11,8 @@ export { useProfitAndLoss } from './hooks/use-pnl';
 export { useCashFlow } from './hooks/use-cash-flow';
 export { useInvoiceAging } from './hooks/use-invoice-aging';
 export { useRentCollection } from './hooks/use-rent-collection';
+export { useRecurringExpenses } from './hooks/use-recurring-expenses';
+export { useExpenseGenerationPreview } from './hooks/use-expense-generation-preview';
 
 // Server actions are NOT re-exported from the barrel file to avoid
 // mixing 'use client' and 'use server' in one module.
