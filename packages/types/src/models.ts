@@ -308,6 +308,9 @@ export interface Invoice {
   convenience_fee: number;
   plaid_transfer_id: string | null;
   payment_processor: 'stripe' | 'plaid' | null;
+  expense_type: string | null;
+  recurring_expense_id: string | null;
+  generated_for_period: string | null;
   created_at: string;
   updated_at: string;
 }
