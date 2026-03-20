@@ -6,13 +6,14 @@ import { useExpenses } from '@onereal/accounting';
 import { useProperties } from '@onereal/portfolio';
 import { deleteExpense } from '@onereal/accounting/actions/delete-expense';
 import { ExpenseDialog } from '@/components/accounting/expense-dialog';
+import { GenerateExpensesDialog } from '@/components/accounting/generate-expenses-dialog';
 import { resolveDateRange } from '@/lib/date-range';
 import {
   Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Badge,
   cn,
 } from '@onereal/ui';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Expense } from '@onereal/types';
@@ -37,6 +38,7 @@ export default function OutgoingPage() {
 
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
 
   const { data: propertiesData } = useProperties({ orgId: activeOrg?.id ?? null });
   const properties = (propertiesData?.data ?? []) as any[];
@@ -90,6 +92,9 @@ export default function OutgoingPage() {
               </Button>
             ))}
           </div>
+          <Button variant="outline" className="gap-2" onClick={() => setGenerateDialogOpen(true)}>
+            <RefreshCw className="h-4 w-4" /> Generate
+          </Button>
           <Button className="gap-2" onClick={handleNewExpense}>
             <Plus className="h-4 w-4" /> New Expense
           </Button>
@@ -169,6 +174,10 @@ export default function OutgoingPage() {
         open={expenseDialogOpen}
         onOpenChange={setExpenseDialogOpen}
         expense={editingExpense}
+      />
+      <GenerateExpensesDialog
+        open={generateDialogOpen}
+        onOpenChange={setGenerateDialogOpen}
       />
     </div>
   );
