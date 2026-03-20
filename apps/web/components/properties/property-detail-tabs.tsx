@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, Badge, StatCard, Button,
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@onereal/ui';
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Switch } from '@onereal/ui';
 import { DoorOpen, Percent, DollarSign, MapPin, BedDouble, Bath, Ruler, Pencil, Plus, Trash2, ExternalLink } from 'lucide-react';
 import type { Property, Unit, PropertyImage } from '@onereal/types';
 import { UnitTable } from './unit-table';
@@ -15,6 +15,11 @@ import { LeaseDialog } from '@/components/contacts/lease-dialog';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { useRecurringExpenses } from '@onereal/accounting';
+import { updateRecurringExpense } from '@onereal/accounting/actions/update-recurring-expense';
+import { deleteRecurringExpense } from '@onereal/accounting/actions/delete-recurring-expense';
+import { RecurringExpenseDialog } from '@/components/accounting/recurring-expense-dialog';
+import type { RecurringExpense } from '@onereal/types';
 
 const SINGLE_UNIT_TYPES = ['single_family', 'townhouse', 'condo'];
 
@@ -40,6 +45,7 @@ export function PropertyDetailTabs({ property, units, images }: PropertyDetailTa
         )}
         <TabsTrigger value="images">Images ({images.length})</TabsTrigger>
         <TabsTrigger value="leases">Leases</TabsTrigger>
+        <TabsTrigger value="recurring">Recurring</TabsTrigger>
       </TabsList>
 
       <TabsContent value="overview" className="space-y-4">
@@ -84,6 +90,10 @@ export function PropertyDetailTabs({ property, units, images }: PropertyDetailTa
 
       <TabsContent value="leases">
         <PropertyLeases propertyId={property.id} />
+      </TabsContent>
+
+      <TabsContent value="recurring">
+        <PropertyRecurringExpenses propertyId={property.id} units={units} />
       </TabsContent>
     </Tabs>
   );
@@ -197,6 +207,114 @@ function PropertyLeases({ propertyId }: { propertyId: string }) {
         onOpenChange={setLeaseDialogOpen}
         lease={editingLease}
         defaultPropertyId={propertyId}
+      />
+    </div>
+  );
+}
+
+function PropertyRecurringExpenses({ propertyId, units }: { propertyId: string; units: Unit[] }) {
+  const queryClient = useQueryClient();
+  const { data: recurringData } = useRecurringExpenses(propertyId);
+  const recurring = (recurringData ?? []) as RecurringExpense[];
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<RecurringExpense | null>(null);
+
+  async function handleDelete(id: string) {
+    if (!confirm('Delete this recurring expense? Already-generated expenses will not be affected.')) return;
+    const result = await deleteRecurringExpense(id);
+    if (result.success) {
+      toast.success('Recurring expense deleted');
+      queryClient.invalidateQueries({ queryKey: ['recurring-expenses'] });
+    } else {
+      toast.error(result.error);
+    }
+  }
+
+  async function handleToggleActive(item: RecurringExpense) {
+    const result = await updateRecurringExpense(item.id, {
+      property_id: item.property_id,
+      unit_id: item.unit_id,
+      expense_type: item.expense_type as any,
+      amount: item.amount,
+      frequency: item.frequency,
+      description: item.description,
+      provider_id: item.provider_id,
+      start_date: item.start_date,
+      end_date: item.end_date,
+      is_active: !item.is_active,
+    });
+    if (result.success) {
+      queryClient.invalidateQueries({ queryKey: ['recurring-expenses'] });
+    } else {
+      toast.error(result.error);
+    }
+  }
+
+  const unitOptions = units.map((u) => ({ id: u.id, unit_number: u.unit_number ?? '' }));
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button size="sm" className="gap-2" onClick={() => { setEditing(null); setDialogOpen(true); }}>
+          <Plus className="h-4 w-4" /> Add Recurring Expense
+        </Button>
+      </div>
+      {recurring.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center text-muted-foreground">
+            No recurring expenses set up for this property yet.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Type</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+                <TableHead>Frequency</TableHead>
+                <TableHead>Vendor</TableHead>
+                <TableHead>Active</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {recurring.map((item) => (
+                <TableRow key={item.id} className={!item.is_active ? 'opacity-50' : ''}>
+                  <TableCell className="capitalize">{item.expense_type.replace(/_/g, ' ')}</TableCell>
+                  <TableCell className="text-right font-medium">
+                    ${Number(item.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </TableCell>
+                  <TableCell className="capitalize">{item.frequency}</TableCell>
+                  <TableCell>{item.service_providers?.name ?? '\u2014'}</TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={item.is_active}
+                      onCheckedChange={() => handleToggleActive(item)}
+                    />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => { setEditing(item); setDialogOpen(true); }}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+      <RecurringExpenseDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        recurringExpense={editing}
+        propertyId={propertyId}
+        units={unitOptions}
       />
     </div>
   );
