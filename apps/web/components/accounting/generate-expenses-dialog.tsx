@@ -45,15 +45,15 @@ export function GenerateExpensesDialog({ open, onOpenChange }: GenerateExpensesD
     if (result.success) {
       const { generated, skipped } = result.data;
       if (generated > 0) {
-        let msg = `Generated ${generated} expense(s)`;
+        let msg = `Generated ${generated} bill(s)`;
         if (skipped > 0) msg += ` (${skipped} already existed)`;
         toast.success(msg);
       } else if (skipped > 0) {
-        toast.info(`All ${skipped} expense(s) already exist for this month`);
+        toast.info(`All ${skipped} bill(s) already exist for this month`);
       } else {
         toast.info('No recurring expenses to generate');
       }
-      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['financial-stats'] });
       queryClient.invalidateQueries({ queryKey: ['expense-generation-preview'] });
       onOpenChange(false);
@@ -79,7 +79,7 @@ export function GenerateExpensesDialog({ open, onOpenChange }: GenerateExpensesD
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Generate Recurring Expenses</DialogTitle>
+          <DialogTitle>Generate Monthly Bills</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
@@ -108,8 +108,8 @@ export function GenerateExpensesDialog({ open, onOpenChange }: GenerateExpensesD
               <p className="text-sm text-muted-foreground">Checking recurring expenses...</p>
             ) : preview ? (
               <p className="text-sm text-muted-foreground">
-                <strong className="text-foreground">{preview.eligible}</strong> recurring expense(s)
-                to generate for {monthNames[month - 1]} {year}.
+                This will create bills for <strong className="text-foreground">{preview.eligible} active recurring expense(s)</strong> that
+                don&apos;t have {monthNames[month - 1]} {year} bills yet.
               </p>
             ) : (
               <p className="text-sm text-muted-foreground">No recurring expenses configured.</p>
@@ -124,7 +124,7 @@ export function GenerateExpensesDialog({ open, onOpenChange }: GenerateExpensesD
             >
               {isGenerating
                 ? 'Generating...'
-                : `Generate ${preview?.eligible ?? 0} Expense(s)`}
+                : `Generate ${preview?.eligible ?? 0} Bill(s)`}
             </Button>
           </div>
         </div>
