@@ -20,7 +20,7 @@ const FEATURES = [
 
 export function AuthBrandPanel() {
   return (
-    <div className="relative hidden flex-col items-start justify-center overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-12 md:flex">
+    <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-12 md:flex">
       {/* Decorative radial glows */}
       <div className="pointer-events-none absolute -right-[30%] -top-[50%] h-[400px] w-[400px] rounded-full bg-[radial-gradient(circle,rgba(59,130,246,0.15)_0%,transparent_70%)]" />
       <div className="pointer-events-none absolute -bottom-[30%] -left-[20%] h-[300px] w-[300px] rounded-full bg-[radial-gradient(circle,rgba(99,102,241,0.1)_0%,transparent_70%)]" />
@@ -36,7 +36,7 @@ export function AuthBrandPanel() {
       </div>
 
       {/* Feature highlights */}
-      <div className="relative z-10 mt-10 flex flex-col gap-5">
+      <div className="relative z-10 mt-auto flex flex-col gap-5 pt-10">
         {FEATURES.map((f) => (
           <div key={f.title} className="flex items-start gap-3.5">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.08]">
