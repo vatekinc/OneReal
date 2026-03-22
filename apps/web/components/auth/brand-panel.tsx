@@ -26,13 +26,13 @@ export function AuthBrandPanel() {
       <div className="pointer-events-none absolute -bottom-[30%] -left-[20%] h-[300px] w-[300px] rounded-full bg-[radial-gradient(circle,rgba(99,102,241,0.1)_0%,transparent_70%)]" />
 
       {/* Logo */}
-      <div className="relative z-10">
-        <div className="flex items-center gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="OneReal" className="h-12 w-12" />
+      <div className="relative z-10 flex items-center gap-4">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.png" alt="OneReal" className="h-16 w-16" />
+        <div>
           <span className="text-2xl font-bold tracking-tight text-white">OneReal</span>
+          <p className="mt-0.5 text-sm text-slate-400">Real Estate &amp; Property Management</p>
         </div>
-        <p className="ml-[60px] mt-1 text-sm text-slate-400">Real Estate &amp; Property Management</p>
       </div>
 
       {/* Feature highlights */}
