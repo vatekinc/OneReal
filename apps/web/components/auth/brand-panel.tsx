@@ -20,7 +20,7 @@ const FEATURES = [
 
 export function AuthBrandPanel() {
   return (
-    <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-10 md:flex">
+    <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-12 md:flex">
       {/* Decorative radial glows */}
       <div className="pointer-events-none absolute -right-[30%] -top-[50%] h-[400px] w-[400px] rounded-full bg-[radial-gradient(circle,rgba(59,130,246,0.15)_0%,transparent_70%)]" />
       <div className="pointer-events-none absolute -bottom-[30%] -left-[20%] h-[300px] w-[300px] rounded-full bg-[radial-gradient(circle,rgba(99,102,241,0.1)_0%,transparent_70%)]" />
@@ -28,12 +28,11 @@ export function AuthBrandPanel() {
       {/* Logo */}
       <div className="relative z-10">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-base font-bold text-slate-900">
-            O
-          </div>
-          <span className="text-xl font-bold tracking-tight text-white">OneReal</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="OneReal" className="h-12 w-12" />
+          <span className="text-2xl font-bold tracking-tight text-white">OneReal</span>
         </div>
-        <p className="ml-12 mt-1 text-sm text-slate-400">Property management, simplified.</p>
+        <p className="ml-[60px] mt-1 text-sm text-slate-400">Real Estate &amp; Property Management</p>
       </div>
 
       {/* Feature highlights */}
