@@ -3,10 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import {
-  Card, CardContent, CardDescription, CardHeader, CardTitle,
-  Button, Input, Label,
-} from '@onereal/ui';
+import { Button, Input, Label } from '@onereal/ui';
 import { toast } from 'sonner';
 
 export default function ResetPasswordPage() {
@@ -37,32 +34,30 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <Card>
-      <CardHeader className="text-center">
-        <CardTitle>Reset password</CardTitle>
-        <CardDescription>Enter your new password</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="password">New Password</Label>
-            <Input
-              id="password" type="password"
-              value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input
-              id="confirmPassword" type="password"
-              value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required
-            />
-          </div>
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Updating...' : 'Update password'}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+    <>
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold tracking-tight">Reset password</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Enter your new password</p>
+      </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="password">New Password</Label>
+          <Input
+            id="password" type="password"
+            value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="confirmPassword">Confirm Password</Label>
+          <Input
+            id="confirmPassword" type="password"
+            value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required
+          />
+        </div>
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? 'Updating...' : 'Update password'}
+        </Button>
+      </form>
+    </>
   );
 }
