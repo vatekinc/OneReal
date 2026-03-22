@@ -14,7 +14,7 @@ const DATE_RANGES = [
 export function DateRangeFilter() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeRange = searchParams.get('range') ?? 'current_month';
+  const activeRange = searchParams.get('range') ?? 'current_year';
 
   function handleRangeChange(range: string) {
     const params = new URLSearchParams(searchParams.toString());

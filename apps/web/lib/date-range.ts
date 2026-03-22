@@ -13,7 +13,7 @@ export function resolveDateRange(
   const now = new Date();
   const toDate = now.toISOString().split('T')[0];
 
-  switch (range ?? 'current_month') {
+  switch (range ?? 'current_year') {
     case 'current_month': {
       const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       return { from: firstOfMonth.toISOString().split('T')[0], to: toDate };

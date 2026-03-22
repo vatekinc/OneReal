@@ -6,14 +6,14 @@ interface InvoiceAgingCardProps {
 }
 
 const BUCKET_CONFIG: Record<string, { label: string; dotColor: string; textColor: string }> = {
-  current: { label: 'Current', dotColor: 'bg-green-500', textColor: 'text-green-600' },
-  '1-30': { label: '1\u201330 days', dotColor: 'bg-yellow-500', textColor: 'text-yellow-600' },
-  '31-60': { label: '31\u201360 days', dotColor: 'bg-orange-500', textColor: 'text-orange-600' },
-  '61-90': { label: '61\u201390 days', dotColor: 'bg-red-500', textColor: 'text-red-600' },
-  '90+': { label: '90+ days', dotColor: 'bg-red-700', textColor: 'text-red-700' },
+  'Current': { label: 'Current', dotColor: 'bg-green-500', textColor: 'text-green-600' },
+  '1-30 Days': { label: '1\u201330 days', dotColor: 'bg-yellow-500', textColor: 'text-yellow-600' },
+  '31-60 Days': { label: '31\u201360 days', dotColor: 'bg-orange-500', textColor: 'text-orange-600' },
+  '61-90 Days': { label: '61\u201390 days', dotColor: 'bg-red-500', textColor: 'text-red-600' },
+  '90+ Days': { label: '90+ days', dotColor: 'bg-red-700', textColor: 'text-red-700' },
 };
 
-const BUCKET_ORDER = ['current', '1-30', '31-60', '61-90', '90+'];
+const BUCKET_ORDER = ['Current', '1-30 Days', '31-60 Days', '61-90 Days', '90+ Days'];
 
 function formatCurrency(value: number): string {
   return `$${value.toLocaleString()}`;
