@@ -35,8 +35,20 @@ export function AuthBrandPanel() {
         </div>
       </div>
 
+      {/* Hero tagline */}
+      <div className="relative z-10 my-auto">
+        <h2 className="text-3xl font-bold leading-tight tracking-tight text-white lg:text-4xl">
+          Manage smarter.<br />
+          Grow faster.
+        </h2>
+        <p className="mt-4 max-w-[320px] text-sm leading-relaxed text-slate-400">
+          Everything you need to manage properties, track finances, and scale your
+          real estate portfolio — all in one platform.
+        </p>
+      </div>
+
       {/* Feature highlights */}
-      <div className="relative z-10 mt-auto flex flex-col gap-5 pt-10">
+      <div className="relative z-10 flex flex-col gap-5">
         {FEATURES.map((f) => (
           <div key={f.title} className="flex items-start gap-3.5">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.08]">
