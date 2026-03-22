@@ -30,14 +30,14 @@ export function AuthBrandPanel() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.png" alt="OneReal" className="h-16 w-16" />
         <div>
-          <span className="text-2xl font-bold tracking-tight text-white">OneReal</span>
+          <span className="text-3xl font-bold tracking-tight text-white">OneReal</span>
           <p className="mt-0.5 text-sm text-slate-400">Real Estate &amp; Property Management</p>
         </div>
       </div>
 
       {/* Hero tagline */}
       <div className="relative z-10 my-auto">
-        <h2 className="text-3xl font-bold leading-tight tracking-tight text-white lg:text-4xl">
+        <h2 className="text-xl font-bold leading-tight tracking-tight text-white lg:text-2xl">
           Manage smarter.<br />
           Grow faster.
         </h2>
