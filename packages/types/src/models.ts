@@ -329,6 +329,43 @@ export interface Payment {
   created_at: string;
 }
 
+export interface Credit {
+  id: string;
+  org_id: string;
+  tenant_id: string;
+  lease_id: string | null;
+  property_id: string | null;
+  amount: number;
+  amount_used: number;
+  reason: string;
+  source: 'manual' | 'overpayment' | 'advance_payment';
+  invoice_id: string | null;
+  status: 'active' | 'fully_applied' | 'void';
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joined fields
+  tenant?: Tenant;
+  lease?: Lease;
+  property?: Property;
+}
+
+export interface CreditApplication {
+  id: string;
+  org_id: string;
+  credit_id: string;
+  invoice_id: string;
+  amount: number;
+  status: 'active' | 'reversed';
+  applied_by: string | null;
+  applied_at: string;
+  reversed_at: string | null;
+  created_at: string;
+  // Joined fields
+  credit?: Credit;
+  invoice?: Invoice;
+}
+
 export interface PaymentEvent {
   id: string;
   stripe_event_id: string;
