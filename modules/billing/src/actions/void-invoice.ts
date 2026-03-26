@@ -11,21 +11,43 @@ export async function voidInvoice(id: string): Promise<ActionResult> {
 
     const db = supabase as any;
 
-    // Check if invoice has payments
     const { data: invoice, error: fetchError } = await db
       .from('invoices')
-      .select('amount_paid, status')
+      .select('amount_paid, status, org_id')
       .eq('id', id)
       .single();
 
     if (fetchError) return { success: false, error: fetchError.message };
 
-    if (Number(invoice.amount_paid) > 0) {
-      return { success: false, error: 'Cannot void an invoice that has payments' };
-    }
-
     if (invoice.status === 'void') {
       return { success: false, error: 'Invoice is already void' };
+    }
+
+    // Check for credit applications and reverse them
+    const { data: creditApps } = await db
+      .from('credit_applications')
+      .select('id')
+      .eq('invoice_id', id)
+      .eq('status', 'active');
+
+    if (creditApps && creditApps.length > 0) {
+      const { error: reverseError } = await db.rpc('reverse_invoice_credit_applications', {
+        p_org_id: invoice.org_id,
+        p_invoice_id: id,
+      });
+      if (reverseError) return { success: false, error: reverseError.message };
+    }
+
+    // Re-fetch invoice after potential credit reversal
+    const { data: updatedInvoice } = await db
+      .from('invoices')
+      .select('amount_paid')
+      .eq('id', id)
+      .single();
+
+    // Block void if there are still cash payments
+    if (Number(updatedInvoice.amount_paid) > 0) {
+      return { success: false, error: 'Cannot void an invoice that has cash payments. Remove payments first.' };
     }
 
     const { error } = await db
