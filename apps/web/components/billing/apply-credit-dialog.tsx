@@ -6,7 +6,7 @@ import { useCredits } from '@onereal/billing';
 import { applyCredits } from '@onereal/billing/actions/apply-credit';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-  Button, Badge, Input, Checkbox,
+  Button, Badge, Input,
 } from '@onereal/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -116,9 +116,11 @@ export function ApplyCreditDialog({ open, onOpenChange, invoice }: ApplyCreditDi
               const isSelected = selections[credit.id] !== undefined;
               return (
                 <div key={credit.id} className="flex items-center gap-3 rounded-lg border p-3">
-                  <Checkbox
+                  <input
+                    type="checkbox"
                     checked={isSelected}
-                    onCheckedChange={() => toggleCredit(credit.id, remaining)}
+                    onChange={() => toggleCredit(credit.id, remaining)}
+                    className="h-4 w-4 rounded border-gray-300 accent-primary"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">

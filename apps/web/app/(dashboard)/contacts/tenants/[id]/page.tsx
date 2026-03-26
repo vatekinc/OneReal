@@ -7,6 +7,7 @@ import { useTenant, useLeases } from '@onereal/contacts';
 import { deleteLease } from '@onereal/contacts/actions/delete-lease';
 import { inviteTenant } from '@onereal/tenant-portal/actions/invite-tenant';
 import { TenantDialog } from '@/components/contacts/tenant-dialog';
+import { TenantCreditWidget } from '@/components/contacts/tenant-credit-widget';
 import { LeaseDialog } from '@/components/contacts/lease-dialog';
 import {
   Button, Card, CardContent, CardHeader, CardTitle, Badge,
@@ -156,6 +157,8 @@ export default function TenantDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      <TenantCreditWidget tenantId={id} />
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">

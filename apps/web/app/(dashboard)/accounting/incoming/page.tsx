@@ -11,6 +11,7 @@ import { InvoiceTable } from '@/components/billing/invoice-table';
 import { InvoiceDialog } from '@/components/billing/invoice-dialog';
 import { PaymentDialog } from '@/components/billing/payment-dialog';
 import { GenerateInvoicesDialog } from '@/components/billing/generate-invoices-dialog';
+import { ApplyCreditDialog } from '@/components/billing/apply-credit-dialog';
 import { resolveDateRange } from '@/lib/date-range';
 import {
   Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -47,6 +48,7 @@ export default function IncomingPage() {
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
+  const [applyCreditDialogOpen, setApplyCreditDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
   const { data: propertiesData } = useProperties({ orgId: activeOrg?.id ?? null });
@@ -104,6 +106,11 @@ export default function IncomingPage() {
     } else {
       toast.error(result.error);
     }
+  }
+
+  function handleApplyCredit(invoice: Invoice) {
+    setSelectedInvoice(invoice);
+    setApplyCreditDialogOpen(true);
   }
 
   function handleNewInvoice() {
@@ -194,6 +201,7 @@ export default function IncomingPage() {
           onEdit={handleEdit}
           onVoid={handleVoid}
           onDelete={handleDelete}
+          onApplyCredit={handleApplyCredit}
         />
       )}
 
@@ -211,6 +219,11 @@ export default function IncomingPage() {
       <GenerateInvoicesDialog
         open={generateDialogOpen}
         onOpenChange={setGenerateDialogOpen}
+      />
+      <ApplyCreditDialog
+        open={applyCreditDialogOpen}
+        onOpenChange={setApplyCreditDialogOpen}
+        invoice={selectedInvoice}
       />
     </div>
   );

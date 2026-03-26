@@ -3,8 +3,9 @@
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
   Button,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@onereal/ui';
-import { Pencil, DollarSign, Ban, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, DollarSign, Ban, Trash2, CreditCard } from 'lucide-react';
 import type { Invoice } from '@onereal/types';
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -23,9 +24,10 @@ interface InvoiceTableProps {
   onEdit: (invoice: Invoice) => void;
   onVoid: (invoice: Invoice) => void;
   onDelete: (invoice: Invoice) => void;
+  onApplyCredit?: (invoice: Invoice) => void;
 }
 
-export function InvoiceTable({ invoices, direction, onPay, onEdit, onVoid, onDelete }: InvoiceTableProps) {
+export function InvoiceTable({ invoices, direction, onPay, onEdit, onVoid, onDelete, onApplyCredit }: InvoiceTableProps) {
   return (
     <div className="rounded-lg border">
       <Table>
@@ -78,6 +80,11 @@ export function InvoiceTable({ invoices, direction, onPay, onEdit, onVoid, onDel
                     {canPay && (
                       <Button variant="ghost" size="icon" onClick={() => onPay(inv)} title="Record Payment">
                         <DollarSign className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {inv.direction === 'receivable' && (inv.status === 'open' || inv.status === 'partially_paid') && onApplyCredit && (
+                      <Button variant="ghost" size="icon" onClick={() => onApplyCredit(inv)} title="Apply Credit">
+                        <CreditCard className="h-4 w-4" />
                       </Button>
                     )}
                     {canEdit && (

@@ -36,6 +36,7 @@ const navItems: NavItem[] = [
       { label: 'Overview', href: '/accounting' },
       { label: 'Incoming', href: '/accounting/incoming' },
       { label: 'Outgoing', href: '/accounting/outgoing' },
+      { label: 'Credits', href: '/accounting/credits' },
     ],
   },
   {

@@ -72,12 +72,18 @@ export function PaymentDialog({ open, onOpenChange, invoice }: PaymentDialogProp
     const result = await recordPayment(activeOrg.id, values);
 
     if (result.success) {
-      toast.success('Payment recorded');
+      if (result.data?.overpayment_amount && result.data.overpayment_amount > 0) {
+        toast.success(`Payment recorded. $${result.data.overpayment_amount.toFixed(2)} credit created from overpayment.`);
+      } else {
+        toast.success('Payment recorded');
+      }
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['payments'] });
       queryClient.invalidateQueries({ queryKey: ['income'] });
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['financial-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['credits'] });
+      queryClient.invalidateQueries({ queryKey: ['credit-balance'] });
       onOpenChange(false);
     } else {
       toast.error(result.error);
@@ -102,7 +108,7 @@ export function PaymentDialog({ open, onOpenChange, invoice }: PaymentDialogProp
                 <FormItem>
                   <FormLabel>Amount *</FormLabel>
                   <FormControl>
-                    <Input type="number" step="0.01" max={remaining} {...field} value={field.value ?? ''} />
+                    <Input type="number" step="0.01" {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
