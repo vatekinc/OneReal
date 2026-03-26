@@ -13,3 +13,6 @@ export { useInvoiceGenerationPreview } from './hooks/use-invoice-generation-prev
 //   import { createInvoice } from '@onereal/billing/actions/create-invoice';
 //   import { generateInvoices } from '@onereal/billing/actions/generate-invoices';
 //   import { recordPayment } from '@onereal/billing/actions/record-payment';
+
+export { creditSchema, applyCreditSchema, type CreditFormValues, type ApplyCreditFormValues } from './schemas/credit-schema';
+export { useCredits, useTenantCreditBalance, useCreditApplications, type CreditFilters } from './hooks/use-credits';
