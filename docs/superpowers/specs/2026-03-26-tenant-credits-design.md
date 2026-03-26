@@ -46,12 +46,13 @@ Currently, the only option is to void an invoice entirely. There's no way to par
 | `tenant_id` | UUID | FK tenants, NOT NULL | Credit belongs to this tenant |
 | `lease_id` | UUID | FK leases, NULLABLE | Optional lease scope |
 | `property_id` | UUID | FK properties, NULLABLE | Denormalized for filtering |
-| `amount` | NUMERIC(12,2) | NOT NULL, > 0 | Original credit amount |
-| `amount_used` | NUMERIC(12,2) | NOT NULL, default 0, >= 0 | Amount applied to invoices |
+| `amount` | DECIMAL(10,2) | NOT NULL, > 0 | Original credit amount |
+| `amount_used` | DECIMAL(10,2) | NOT NULL, default 0, CHECK (amount_used <= amount) | Amount applied to invoices |
 | `reason` | TEXT | NOT NULL | Description/justification |
 | `source` | TEXT | NOT NULL, CHECK IN ('manual', 'overpayment', 'advance_payment') | How the credit was created |
 | `invoice_id` | UUID | FK invoices, NULLABLE | Source invoice (overpayment only) |
 | `status` | TEXT | NOT NULL, default 'active', CHECK IN ('active', 'fully_applied', 'void') | Current status |
+| `created_by` | UUID | FK auth.users, NULLABLE | User who created the credit |
 | `created_at` | TIMESTAMPTZ | NOT NULL, default now() | Creation timestamp |
 | `updated_at` | TIMESTAMPTZ | NOT NULL, default now() | Last update timestamp |
 
@@ -63,7 +64,7 @@ Currently, the only option is to void an invoice entirely. There's no way to par
 **RLS Policies:**
 - SELECT: `org_id IN (SELECT get_user_org_ids())`
 - INSERT/UPDATE/DELETE: `org_id IN (SELECT get_user_managed_org_ids())`
-- Tenant portal: tenants can SELECT credits where `tenant_id` matches their tenant record
+- Tenant portal: out of scope for now (see Out of Scope section)
 
 ### `credit_applications` table
 
@@ -73,12 +74,21 @@ Currently, the only option is to void an invoice entirely. There's no way to par
 | `org_id` | UUID | FK organizations, NOT NULL | Organization |
 | `credit_id` | UUID | FK credits, NOT NULL | Source credit |
 | `invoice_id` | UUID | FK invoices, NOT NULL | Invoice being reduced |
-| `amount` | NUMERIC(12,2) | NOT NULL, > 0 | Amount applied |
+| `amount` | DECIMAL(10,2) | NOT NULL, > 0 | Amount applied |
+| `status` | TEXT | NOT NULL, default 'active', CHECK IN ('active', 'reversed') | Application status |
+| `applied_by` | UUID | FK auth.users, NULLABLE | User who applied the credit |
 | `applied_at` | TIMESTAMPTZ | NOT NULL, default now() | When applied |
+| `reversed_at` | TIMESTAMPTZ | NULLABLE | When reversed (if voided) |
+| `created_at` | TIMESTAMPTZ | NOT NULL, default now() | Creation timestamp |
 
 **Indexes:**
 - `(credit_id)` — application history for a credit
 - `(invoice_id)` — credits applied to an invoice
+- `(org_id)` — RLS filtering
+
+**Foreign key behavior:**
+- `credit_id` — ON DELETE RESTRICT (cannot delete a credit with applications)
+- `invoice_id` — ON DELETE CASCADE (matches existing payments FK pattern)
 
 **RLS Policies:** Same pattern as `credits` table.
 
@@ -86,22 +96,31 @@ Currently, the only option is to void an invoice entirely. There's no way to par
 
 ## Overpayment Detection
 
-**Location:** `modules/billing/src/actions/record-payment.ts`
+**Location:** `modules/billing/src/actions/record-payment.ts` calls new RPC `record_payment_with_overpayment`
 
 **Current behavior:** Rejects payments exceeding invoice remaining balance.
 
-**New behavior:**
-1. If `payment_amount > invoice_remaining_balance`:
-   - Apply `invoice_remaining_balance` to the invoice (marks it `paid`)
-   - Calculate excess: `payment_amount - invoice_remaining_balance`
+**New behavior via RPC function `record_payment_with_overpayment`:**
+
+All steps execute in a single database transaction with row-level locking to prevent race conditions:
+
+1. `SELECT ... FOR UPDATE` on the invoice row to acquire lock
+2. Calculate `remaining = amount - amount_paid`
+3. If `payment_amount <= remaining`: existing behavior — update invoice, create payment + income record
+4. If `payment_amount > remaining`:
+   - Apply `remaining` to the invoice (set `amount_paid = amount`, status = `'paid'`)
+   - Create payment record for the full `payment_amount`
+   - Create income record for the full `payment_amount`
+   - Calculate excess: `payment_amount - remaining`
    - Auto-create `credits` record:
      - `amount` = excess
      - `source` = `'overpayment'`
      - `invoice_id` = the overpaid invoice
      - `tenant_id`, `lease_id`, `property_id` inherited from invoice
      - `reason` = `'Overpayment on invoice {invoice_number}'`
-   - Return overpayment info in response for toast notification
-2. If `payment_amount <= invoice_remaining_balance`: existing behavior unchanged
+   - Return credit info in response for toast notification
+
+**Why RPC:** Sequential Supabase client calls are not wrapped in a transaction. Two concurrent payments on the same invoice could both read the same `amount_paid` and corrupt the balance. The RPC function uses `SELECT ... FOR UPDATE` to serialize access.
 
 ---
 
@@ -116,7 +135,8 @@ Currently, the only option is to void an invoice entirely. There's no way to par
    - If credit has `lease_id`, it must match the invoice's `lease_id`
    - Tenant-scoped credits (no `lease_id`) available for any invoice
 2. User selects credits and enters amounts (defaults to min of credit remaining, invoice remaining)
-3. On submit (single transaction):
+3. On submit — calls RPC `apply_credits_to_invoice` (single database transaction with row locking):
+   - `SELECT ... FOR UPDATE` on the invoice and all selected credit rows
    - Validate: total applied <= invoice remaining balance
    - Validate: per-credit applied <= credit remaining balance
    - For each credit:
@@ -125,7 +145,14 @@ Currently, the only option is to void an invoice entirely. There's no way to par
      - If `amount_used >= amount`, set `status = 'fully_applied'`
    - Update `invoice.amount_paid += total_applied`
    - Update invoice status: `paid` if `amount_paid >= amount`, else `partially_paid`
-   - Create `income` record (type = `'credit_applied'`) for accounting sync
+   - Do NOT create an `income` record (see Accounting note below)
+
+**Accounting note:** Credit applications do NOT create income records. The income was already recorded at the point of origin:
+- `overpayment` credits: income recorded when the original payment was made
+- `advance_payment` credits: income recorded at credit creation time (see Advance Payment section)
+- `manual` credits: no cash received, so no income record (it's a discount/write-off)
+
+This avoids double-counting revenue.
 
 **Constraints:**
 - Cannot apply more than invoice's remaining balance
@@ -135,13 +162,50 @@ Currently, the only option is to void an invoice entirely. There's no way to par
 
 ---
 
+## Advance Payment Accounting
+
+When creating a credit with `source = 'advance_payment'`, an `income` record is created immediately:
+- `income_type` = `'advance_payment'`
+- `amount` = credit amount
+- `property_id` = from the credit (or the tenant's active lease property)
+- `transaction_date` = credit creation date
+
+This ensures cash received is reflected in financial reports right away. When the credit is later applied to an invoice, no second income record is created (avoiding double-counting).
+
+---
+
+## Invoice Constraint
+
+The migration must add a CHECK constraint to the existing `invoices` table:
+
+```sql
+ALTER TABLE public.invoices ADD CONSTRAINT invoices_amount_paid_check CHECK (amount_paid <= amount);
+```
+
+This protects against race conditions where concurrent payments and/or credit applications could push `amount_paid` beyond `amount`. This is a safety net for both existing payment flows and the new credit application flow.
+
+---
+
+## Income Type Constraint
+
+The migration must update the `income` table's `income_type` CHECK constraint to allow new types:
+
+```sql
+ALTER TABLE public.income DROP CONSTRAINT income_income_type_check;
+ALTER TABLE public.income ADD CONSTRAINT income_income_type_check
+  CHECK (income_type IN ('rent', 'deposit', 'late_fee', 'advance_payment', 'other'));
+```
+
+---
+
 ## RPC Functions
 
-### `get_tenant_credit_balance(p_org_id UUID, p_tenant_id UUID)`
+### `get_tenant_credit_balance(p_org_id UUID, p_tenant_id UUID, p_lease_id UUID DEFAULT NULL)`
 
 **Returns:** `{ total_credits NUMERIC, total_used NUMERIC, available_balance NUMERIC, active_count INTEGER }`
 
-**Query:**
+When `p_lease_id` is provided, returns credits available for that lease (tenant-scoped credits + lease-scoped credits matching that lease). When NULL, returns all credits for the tenant.
+
 ```sql
 SELECT
   COALESCE(SUM(amount), 0) AS total_credits,
@@ -151,8 +215,19 @@ SELECT
 FROM credits
 WHERE org_id = p_org_id
   AND tenant_id = p_tenant_id
-  AND status = 'active';
+  AND status = 'active'
+  AND (p_lease_id IS NULL OR lease_id IS NULL OR lease_id = p_lease_id);
 ```
+
+### `apply_credits_to_invoice(p_org_id UUID, p_invoice_id UUID, p_applications JSONB)`
+
+**Transactional RPC** — acquires `FOR UPDATE` locks on the invoice and all referenced credits. Validates amounts, inserts `credit_applications`, updates `credits.amount_used` and `credits.status`, updates `invoice.amount_paid` and `invoice.status`. Returns applied amounts.
+
+`p_applications` format: `[{"credit_id": "uuid", "amount": 50.00}, ...]`
+
+### `record_payment_with_overpayment(p_org_id UUID, p_invoice_id UUID, p_amount NUMERIC, p_payment_method TEXT, p_payment_date DATE, p_reference_number TEXT DEFAULT NULL, p_notes TEXT DEFAULT NULL)`
+
+**Transactional RPC** — acquires `FOR UPDATE` lock on the invoice. Records payment, creates income record, updates invoice. If overpayment detected, creates credit record. Returns `{payment_id, credit_id (nullable), overpayment_amount}`.
 
 ### Impact on existing functions
 
@@ -228,12 +303,15 @@ WHERE org_id = p_org_id
 - `schemas/credit-schema.ts` — Zod schemas for credit creation and application
 - `actions/create-credit.ts` — Server action for manual credit / advance payment creation
 - `actions/apply-credit.ts` — Server action for applying credits to invoices
-- `actions/void-credit.ts` — Server action to void a credit
+- `actions/void-credit.ts` — Server action calling `void_credit` RPC (uses FOR UPDATE locking to prevent races with concurrent applications)
 - `hooks/use-credits.ts` — React Query hooks for fetching credits
 
 ### Modified files:
-- `modules/billing/src/actions/record-payment.ts` — Add overpayment detection
+- `modules/billing/src/actions/record-payment.ts` — Call overpayment RPC instead of direct updates
+- `modules/billing/src/actions/void-invoice.ts` — Handle reversing credit applications before voiding
 - `packages/types/src/models.ts` — Add `Credit` and `CreditApplication` interfaces
+- Sidebar navigation component — Add "Credits" link under Accounting section
+- Tenant detail page — Add credit widget
 
 ### New migration:
 - `supabase/migrations/YYYYMMDD_credits.sql` — Table creation, indexes, RLS, RPC function
@@ -255,6 +333,7 @@ interface Credit {
   source: 'manual' | 'overpayment' | 'advance_payment';
   invoice_id: string | null;
   status: 'active' | 'fully_applied' | 'void';
+  created_by: string | null;
   created_at: string;
   updated_at: string;
   // Joined fields
@@ -269,7 +348,11 @@ interface CreditApplication {
   credit_id: string;
   invoice_id: string;
   amount: number;
+  status: 'active' | 'reversed';
+  applied_by: string | null;
   applied_at: string;
+  reversed_at: string | null;
+  created_at: string;
   // Joined fields
   credit?: Credit;
   invoice?: Invoice;
@@ -280,12 +363,14 @@ interface CreditApplication {
 
 ## Edge Cases
 
-1. **Void a credit with partial applications** — Only void remaining balance. Existing applications stay intact. Set `amount = amount_used`, status = `'void'`.
-2. **Void an invoice with applied credits** — Reverse the credit applications: reduce `credits.amount_used`, set credit status back to `'active'` if it was `'fully_applied'`. Delete the `credit_applications` records.
+1. **Void a credit with partial applications** — Keep `amount` unchanged (preserves audit trail). Set `status = 'void'` via `void_credit` RPC (with `FOR UPDATE` locking). Existing applications stay intact. The remaining balance (amount - amount_used) is effectively zero because voided credits are excluded from available credits queries. For `advance_payment` credits: voiding does NOT reverse the associated income record — the cash was received. If the landlord needs to refund, they handle that separately outside the credits system.
+2. **Void an invoice with applied credits** — Must reverse credit applications first (via RPC for transactional safety): reduce `credits.amount_used` for each application, set credit status back to `'active'` if it was `'fully_applied'`, soft-delete `credit_applications` records by setting `status = 'reversed'` (not hard delete, preserves audit trail). Then void the invoice. Note: existing `void-invoice.ts` blocks voiding if `amount_paid > 0` — this needs to be updated to handle credit-only payments by reversing them first.
 3. **Delete a tenant with credits** — Blocked if active credits exist (same as existing invoice foreign key protection).
 4. **Overpayment on already partially paid invoice** — Works correctly: remaining = `amount - amount_paid`, excess = `payment - remaining`.
 5. **Multiple credits applied to one invoice** — Supported via multiple `credit_applications` rows. Total cannot exceed invoice remaining.
 6. **One credit applied across multiple invoices** — Supported via partial applications. `amount_used` tracks cumulative usage.
+7. **Multi-tenant leases** — Overpayment credits inherit `tenant_id` from the invoice (which already has a single `tenant_id`). A lease-scoped credit belongs to a specific tenant on that lease; it cannot be applied to invoices for a different tenant on the same lease.
+8. **Advance payment without a property** — If a tenant-scoped advance payment credit has no `property_id`, the `income` record uses the property from the tenant's most recent active lease. If none found, `property_id` is left NULL (requires removing NOT NULL on income.property_id or using a fallback).
 
 ---
 
