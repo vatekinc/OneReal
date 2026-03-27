@@ -39,10 +39,31 @@ export async function getFinancialStats(
   orgId: string,
   dateRange?: DateRange,
 ): Promise<FinancialStats> {
-  const { data, error } = await (client as any).rpc('get_financial_totals', {
+  // Build both queries upfront so they can run in parallel
+  const currentPromise = (client as any).rpc('get_financial_totals', {
     p_org_id: orgId,
     ...dateParams(dateRange),
   });
+
+  let prevPromise: Promise<any> | null = null;
+  if (dateRange) {
+    const fromDate = new Date(dateRange.from);
+    const toDate = new Date(dateRange.to);
+    const durationMs = toDate.getTime() - fromDate.getTime();
+    const prevFrom = new Date(fromDate.getTime() - durationMs).toISOString().split('T')[0]!;
+    const prevTo = new Date(fromDate.getTime() - 1).toISOString().split('T')[0]!;
+
+    prevPromise = (client as any).rpc('get_financial_totals', {
+      p_org_id: orgId,
+      p_from: prevFrom,
+      p_to: prevTo,
+    });
+  }
+
+  const [{ data, error }, prevResult] = await Promise.all([
+    currentPromise,
+    prevPromise ?? Promise.resolve(null),
+  ]);
   if (error) throw error;
 
   const row = Array.isArray(data) ? data[0] : data;
@@ -54,24 +75,11 @@ export async function getFinancialStats(
     ? Math.round((netIncome / totalIncome) * 100 * 100) / 100
     : 0;
 
-  // Percentage change vs. previous period
   let incomeChange = 0;
   let expenseChange = 0;
 
-  if (dateRange) {
-    const fromDate = new Date(dateRange.from);
-    const toDate = new Date(dateRange.to);
-    const durationMs = toDate.getTime() - fromDate.getTime();
-    const prevFrom = new Date(fromDate.getTime() - durationMs).toISOString().split('T')[0]!;
-    const prevTo = new Date(fromDate.getTime() - 1).toISOString().split('T')[0]!;
-
-    const { data: prevData } = await (client as any).rpc('get_financial_totals', {
-      p_org_id: orgId,
-      p_from: prevFrom,
-      p_to: prevTo,
-    });
-
-    const prevRow = Array.isArray(prevData) ? prevData[0] : prevData;
+  if (prevResult) {
+    const prevRow = Array.isArray(prevResult.data) ? prevResult.data[0] : prevResult.data;
     const prevIncome = Number(prevRow?.total_income) || 0;
     const prevExpenses = Number(prevRow?.total_expenses) || 0;
 

@@ -18,6 +18,9 @@ export function useMessages(conversationId: string | null) {
       return data ?? [];
     },
     enabled: !!conversationId,
-    refetchInterval: 5000,
+    refetchInterval: (query) => {
+      if (typeof document !== 'undefined' && document.hidden) return false;
+      return 60000;
+    },
   });
 }

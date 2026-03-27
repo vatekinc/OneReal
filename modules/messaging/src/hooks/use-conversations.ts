@@ -29,7 +29,9 @@ export function useConversations(orgId: string | null) {
       return data ?? [];
     },
     enabled: !!orgId,
-    refetchInterval: 15000,
-    refetchOnWindowFocus: true,
+    refetchInterval: (query) => {
+      if (typeof document !== 'undefined' && document.hidden) return false;
+      return 60000;
+    },
   });
 }

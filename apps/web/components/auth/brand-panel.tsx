@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { Building2, DollarSign, BarChart3 } from 'lucide-react';
 
 const FEATURES = [
@@ -27,8 +28,7 @@ export function AuthBrandPanel() {
 
       {/* Logo */}
       <div className="relative z-10 flex items-center gap-4">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.png" alt="OneReal" className="h-16 w-16" />
+        <Image src="/logo.png" alt="OneReal" width={64} height={64} />
         <div>
           <span className="text-3xl font-bold tracking-tight text-white">OneReal</span>
           <p className="mt-0.5 text-sm text-slate-400">Real Estate &amp; Property Management</p>

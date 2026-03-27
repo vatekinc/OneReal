@@ -14,9 +14,9 @@ export function useUnreadCount() {
       if (error) throw error;
       return (data as number) ?? 0;
     },
-    refetchInterval: (query) => {
-      const count = query.state.data;
-      return (count && count > 0) ? 15000 : 60000;
+    refetchInterval: () => {
+      if (typeof document !== 'undefined' && document.hidden) return false;
+      return 60000;
     },
   });
 }

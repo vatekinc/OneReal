@@ -16,35 +16,28 @@ export function useLeases(filters: LeaseFilters) {
     queryKey: ['leases', filters],
     queryFn: async () => {
       const supabase = createClient();
+
+      // Use !inner joins to filter server-side when propertyId or tenantId is set
+      const unitsRelation = filters.propertyId ? 'units!inner' : 'units';
+      const leaseTenantsRelation = filters.tenantId ? 'lease_tenants!inner' : 'lease_tenants';
+
       let query = (supabase as any)
         .from('leases')
-        .select('*, lease_tenants(tenant_id, tenants(id, first_name, last_name)), units(unit_number, property_id, properties(name))')
+        .select(`*, ${leaseTenantsRelation}(tenant_id, tenants(id, first_name, last_name)), ${unitsRelation}(unit_number, property_id, properties(name))`)
         .eq('org_id', filters.orgId)
         .order('start_date', { ascending: false });
 
       if (filters.unitId) query = query.eq('unit_id', filters.unitId);
       if (filters.status) query = query.eq('status', filters.status);
+      if (filters.propertyId) query = query.eq('units.property_id', filters.propertyId);
+      if (filters.tenantId) query = query.eq('lease_tenants.tenant_id', filters.tenantId);
 
       const { data, error } = await query;
       if (error) throw error;
 
-      let result = data ?? [];
-
-      // Client-side property filtering (since property_id is on units, not leases)
-      if (filters.propertyId) {
-        result = result.filter((lease: any) => lease.units?.property_id === filters.propertyId);
-      }
-
-      // Client-side tenant filtering (through junction table)
-      if (filters.tenantId) {
-        result = result.filter((lease: any) =>
-          lease.lease_tenants?.some((lt: any) => lt.tenant_id === filters.tenantId)
-        );
-      }
-
       // Compute displayStatus for month-to-month detection (read-only, no DB writes)
       const today = new Date().toISOString().split('T')[0];
-      result = result.map((lease: any) => {
+      return (data ?? []).map((lease: any) => {
         let displayStatus = lease.status;
 
         if (lease.lease_type === 'month_to_month') {
@@ -55,8 +48,6 @@ export function useLeases(filters: LeaseFilters) {
 
         return { ...lease, displayStatus };
       });
-
-      return result;
     },
     enabled: !!filters.orgId,
   });
