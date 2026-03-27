@@ -35,7 +35,7 @@ export default function ReportsPage() {
   const orgId = activeOrg?.id ?? null;
   const [dateRange, setDateRange] = useState<DateRangeValue>({});
   const [activeTab, setActiveTab] = useState('pnl');
-  const dateFilterDefault = activeTab === 'cash-flow' ? 'current_year' : 'current_month';
+  const dateFilterDefault = (activeTab === 'cash-flow' || activeTab === 'collection') ? 'current_year' : 'current_month';
 
   const effectiveDateRange = dateRange.from && dateRange.to
     ? { from: dateRange.from, to: dateRange.to }
