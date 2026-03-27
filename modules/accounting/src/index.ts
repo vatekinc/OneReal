@@ -13,6 +13,7 @@ export { useInvoiceAging } from './hooks/use-invoice-aging';
 export { useRentCollection } from './hooks/use-rent-collection';
 export { useRecurringExpenses } from './hooks/use-recurring-expenses';
 export { useExpenseGenerationPreview } from './hooks/use-expense-generation-preview';
+export { useTenantStatement, usePropertyStatement, useRentRoll } from './hooks/use-statements';
 
 // Server actions are NOT re-exported from the barrel file to avoid
 // mixing 'use client' and 'use server' in one module.
