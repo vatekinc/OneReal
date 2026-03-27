@@ -57,11 +57,11 @@ export interface DateRangeValue {
 
 interface DateRangeFilterClientProps {
   onChange: (value: DateRangeValue) => void;
-  exclude?: string[];
+  defaultRange?: string;
 }
 
-export function DateRangeFilterClient({ onChange, exclude }: DateRangeFilterClientProps) {
-  const [activeRange, setActiveRange] = useState('current_year');
+export function DateRangeFilterClient({ onChange, defaultRange = 'current_month' }: DateRangeFilterClientProps) {
+  const [activeRange, setActiveRange] = useState(defaultRange);
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
 
@@ -87,13 +87,13 @@ export function DateRangeFilterClient({ onChange, exclude }: DateRangeFilterClie
 
   // Emit initial value on mount
   useEffect(() => {
-    onChange(computeDateRange('current_year'));
+    onChange(computeDateRange(defaultRange));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {DATE_RANGES.filter((r) => !exclude?.includes(r.value)).map((r) => (
+      {DATE_RANGES.map((r) => (
         <Button
           key={r.value}
           variant={activeRange === r.value ? 'default' : 'secondary'}

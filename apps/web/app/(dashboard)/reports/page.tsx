@@ -35,6 +35,7 @@ export default function ReportsPage() {
   const orgId = activeOrg?.id ?? null;
   const [dateRange, setDateRange] = useState<DateRangeValue>({});
   const [activeTab, setActiveTab] = useState('pnl');
+  const dateFilterDefault = activeTab === 'cash-flow' ? 'current_year' : 'current_month';
 
   const effectiveDateRange = dateRange.from && dateRange.to
     ? { from: dateRange.from, to: dateRange.to }
@@ -99,10 +100,7 @@ export default function ReportsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">Financial Reports</h1>
-        <DateRangeFilterClient
-          onChange={setDateRange}
-          exclude={activeTab === 'cash-flow' ? ['current_month', 'last_month'] : undefined}
-        />
+        <DateRangeFilterClient key={dateFilterDefault} onChange={setDateRange} defaultRange={dateFilterDefault} />
       </div>
 
       <Tabs defaultValue="pnl" onValueChange={setActiveTab}>
