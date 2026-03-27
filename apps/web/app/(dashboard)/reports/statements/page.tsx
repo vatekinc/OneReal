@@ -80,10 +80,16 @@ export default function StatementsPage() {
     return Array.from(props, ([id, name]) => ({ id, name }));
   }, [tenantId, tenants]);
 
-  // Reset property when tenant changes
+  // Auto-select property when tenant has exactly 1
   function handleTenantChange(id: string) {
     setTenantId(id);
-    setTenantPropertyId('');
+    const tenant = tenants?.find((t: any) => t.id === id);
+    const props = new Map<string, string>();
+    for (const lt of tenant?.lease_tenants ?? []) {
+      const prop = lt.leases?.units?.properties;
+      if (prop) props.set(prop.id, prop.name);
+    }
+    setTenantPropertyId(props.size === 1 ? [...props.keys()][0] : '');
   }
 
   // ── CSV exports ──
