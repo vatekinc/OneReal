@@ -80,12 +80,14 @@ export async function getRentRoll(
   const { data, error } = await (client as any).rpc('get_rent_roll', params);
   if (error) throw error;
   return (data ?? []).map((row: any) => ({
-    tenant_id: row.tenant_id,
-    first_name: row.first_name ?? '',
-    last_name: row.last_name ?? '',
+    property_id: row.property_id,
+    property_name: row.property_name ?? '',
+    tenants: row.tenants ?? '',
     lease_count: Number(row.lease_count) || 0,
     total_monthly_rent: Number(row.total_monthly_rent) || 0,
-    balance_due: Number(row.balance_due) || 0,
+    past_due: Number(row.past_due) || 0,
+    current_due: Number(row.current_due) || 0,
+    future_due: Number(row.future_due) || 0,
     credit_balance: Number(row.credit_balance) || 0,
     net_due: Number(row.net_due) || 0,
   }));

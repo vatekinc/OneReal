@@ -24,7 +24,9 @@ export function RentRollTable({ data, leaseStatus = 'active' }: { data: RentRoll
 
   const totalLeases = data.reduce((sum, r) => sum + r.lease_count, 0);
   const totalRent = data.reduce((sum, r) => sum + r.total_monthly_rent, 0);
-  const totalBalance = data.reduce((sum, r) => sum + r.balance_due, 0);
+  const totalPastDue = data.reduce((sum, r) => sum + r.past_due, 0);
+  const totalCurrentDue = data.reduce((sum, r) => sum + r.current_due, 0);
+  const totalFutureDue = data.reduce((sum, r) => sum + r.future_due, 0);
   const totalCredit = data.reduce((sum, r) => sum + r.credit_balance, 0);
   const totalNet = data.reduce((sum, r) => sum + r.net_due, 0);
 
@@ -32,30 +34,43 @@ export function RentRollTable({ data, leaseStatus = 'active' }: { data: RentRoll
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Tenant</TableHead>
+          <TableHead>Property</TableHead>
+          <TableHead>Tenants</TableHead>
           <TableHead className="text-right">Leases</TableHead>
           <TableHead className="text-right">Monthly Rent</TableHead>
-          <TableHead className="text-right">Balance Due</TableHead>
-          <TableHead className="text-right">Credit Balance</TableHead>
+          <TableHead className="text-right">Past Due</TableHead>
+          <TableHead className="text-right">Current</TableHead>
+          <TableHead className="text-right">Future</TableHead>
+          <TableHead className="text-right">Credits</TableHead>
           <TableHead className="text-right">Net Due</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {data.map((row) => (
-          <TableRow key={row.tenant_id}>
-            <TableCell>{row.last_name}, {row.first_name}</TableCell>
+          <TableRow key={row.property_id}>
+            <TableCell className="font-medium">{row.property_name}</TableCell>
+            <TableCell className="text-sm text-muted-foreground">{row.tenants}</TableCell>
             <TableCell className="text-right">{row.lease_count}</TableCell>
             <TableCell className="text-right">{formatCurrency(row.total_monthly_rent)}</TableCell>
-            <TableCell className="text-right">{formatCurrency(row.balance_due)}</TableCell>
+            <TableCell className={`text-right ${row.past_due > 0 ? 'text-red-600' : ''}`}>
+              {formatCurrency(row.past_due)}
+            </TableCell>
+            <TableCell className="text-right">{formatCurrency(row.current_due)}</TableCell>
+            <TableCell className="text-right text-muted-foreground">{formatCurrency(row.future_due)}</TableCell>
             <TableCell className="text-right">{formatCurrency(row.credit_balance)}</TableCell>
             <TableCell className={`text-right ${netDueColor(row.net_due)}`}>{formatCurrency(row.net_due)}</TableCell>
           </TableRow>
         ))}
         <TableRow className="border-t-2 font-bold">
           <TableCell className="font-bold">Total</TableCell>
+          <TableCell />
           <TableCell className="text-right font-bold">{totalLeases}</TableCell>
           <TableCell className="text-right font-bold">{formatCurrency(totalRent)}</TableCell>
-          <TableCell className="text-right font-bold">{formatCurrency(totalBalance)}</TableCell>
+          <TableCell className={`text-right font-bold ${totalPastDue > 0 ? 'text-red-600' : ''}`}>
+            {formatCurrency(totalPastDue)}
+          </TableCell>
+          <TableCell className="text-right font-bold">{formatCurrency(totalCurrentDue)}</TableCell>
+          <TableCell className="text-right font-bold text-muted-foreground">{formatCurrency(totalFutureDue)}</TableCell>
           <TableCell className="text-right font-bold">{formatCurrency(totalCredit)}</TableCell>
           <TableCell className={`text-right font-bold ${netDueColor(totalNet)}`}>{formatCurrency(totalNet)}</TableCell>
         </TableRow>

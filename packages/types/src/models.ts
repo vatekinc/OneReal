@@ -492,12 +492,14 @@ export interface PropertyStatementRow {
 }
 
 export interface RentRollRow {
-  tenant_id: string;
-  first_name: string;
-  last_name: string;
+  property_id: string;
+  property_name: string;
+  tenants: string;
   lease_count: number;
   total_monthly_rent: number;
-  balance_due: number;
+  past_due: number;
+  current_due: number;
+  future_due: number;
   credit_balance: number;
   net_due: number;
 }

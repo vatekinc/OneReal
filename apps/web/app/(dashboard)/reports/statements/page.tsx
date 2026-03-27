@@ -115,10 +115,11 @@ export default function StatementsPage() {
 
   function exportRentRoll() {
     if (!rentRollData) return;
-    const headers = ['Tenant', 'Leases', 'Monthly Rent', 'Balance Due', 'Credit Balance', 'Net Due'];
+    const headers = ['Property', 'Tenants', 'Leases', 'Monthly Rent', 'Past Due', 'Current', 'Future', 'Credits', 'Net Due'];
     const rows = rentRollData.map((r) => [
-      `${r.last_name}, ${r.first_name}`, String(r.lease_count),
-      r.total_monthly_rent.toFixed(2), r.balance_due.toFixed(2),
+      r.property_name, r.tenants, String(r.lease_count),
+      r.total_monthly_rent.toFixed(2), r.past_due.toFixed(2),
+      r.current_due.toFixed(2), r.future_due.toFixed(2),
       r.credit_balance.toFixed(2), r.net_due.toFixed(2),
     ]);
     downloadCsv('rent-roll.csv', headers, rows);
@@ -223,10 +224,11 @@ export default function StatementsPage() {
             <CardContent className="space-y-4">
               <div className="flex flex-wrap gap-3">
                 <Select value={leaseStatus} onValueChange={setLeaseStatus}>
-                  <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="active">Active Leases</SelectItem>
+                    <SelectItem value="inactive">Inactive Leases</SelectItem>
+                    <SelectItem value="all">All Leases</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={rentRollPropertyId || 'all'} onValueChange={(v) => setRentRollPropertyId(v === 'all' ? '' : v)}>
