@@ -47,7 +47,13 @@ const navItems: NavItem[] = [
     ],
   },
   { label: 'Maintenance', href: '/maintenance', icon: Wrench },
-  { label: 'Reports', href: '/reports', icon: BarChart3 },
+  {
+    label: 'Reports', href: '/reports', icon: BarChart3,
+    children: [
+      { label: 'Financial Reports', href: '/reports' },
+      { label: 'Statements', href: '/reports/statements' },
+    ],
+  },
   { label: 'Messages', href: '/messages', icon: MessageSquare },
 ];
 
