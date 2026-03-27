@@ -55,16 +55,17 @@ async function handleTransferEvents(db: any, plaid: any) {
   const events = syncResponse.data.transfer_events;
   if (!events || events.length === 0) return;
 
-  for (const event of events) {
-    // Idempotency check
-    const eventId = `plaid_${event.event_id}`;
-    const { data: existing } = await db
-      .from('payment_events')
-      .select('id')
-      .eq('plaid_event_id', eventId)
-      .maybeSingle();
+  // Batch idempotency check — fetch all existing event IDs in one query
+  const allEventIds = events.map((e: any) => `plaid_${e.event_id}`);
+  const { data: existingEvents } = await db
+    .from('payment_events')
+    .select('plaid_event_id')
+    .in('plaid_event_id', allEventIds);
+  const processedSet = new Set((existingEvents ?? []).map((e: any) => e.plaid_event_id));
 
-    if (existing) continue;
+  for (const event of events) {
+    const eventId = `plaid_${event.event_id}`;
+    if (processedSet.has(eventId)) continue;
 
     // Insert event for audit
     const { data: eventRow } = await db

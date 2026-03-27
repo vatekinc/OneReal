@@ -43,6 +43,8 @@ export function useExpenses(filters: ExpenseFilters) {
         query = query.lte('transaction_date', filters.to);
       }
 
+      query = query.limit(500);
+
       const { data, error } = await query;
       if (error) throw error;
       return data ?? [];

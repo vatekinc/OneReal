@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTenants } from '@onereal/contacts';
 import { deleteTenant } from '@onereal/contacts/actions/delete-tenant';
 import { TenantDialog } from '@/components/contacts/tenant-dialog';
@@ -31,26 +31,22 @@ export function TenantsClient({ orgId }: TenantsClientProps) {
     search: search || undefined,
   });
 
-  const tenants = (tenantsData ?? []) as any[];
-
-  function getTenantLeases(tenant: any) {
-    return (tenant.lease_tenants ?? []).map((lt: any) => lt.leases).filter(Boolean);
-  }
-
-  function getActiveLeaseCount(tenant: any) {
-    return getTenantLeases(tenant).filter((l: any) => l.status === 'active').length;
-  }
-
-  function getPropertyNames(tenant: any): string[] {
-    const names = new Set<string>();
-    for (const lease of getTenantLeases(tenant)) {
-      if (lease.status === 'active') {
+  const tenants = useMemo(() => {
+    return (tenantsData ?? []).map((tenant: any) => {
+      const leases = (tenant.lease_tenants ?? []).map((lt: any) => lt.leases).filter(Boolean);
+      const activeLeases = leases.filter((l: any) => l.status === 'active');
+      const names = new Set<string>();
+      for (const lease of activeLeases) {
         const propName = lease.units?.properties?.name;
         if (propName) names.add(propName);
       }
-    }
-    return Array.from(names);
-  }
+      return {
+        ...tenant,
+        _activeLeaseCount: activeLeases.length,
+        _propertyNames: Array.from(names),
+      };
+    });
+  }, [tenantsData]);
 
   async function handleDelete(id: string) {
     if (!confirm('Are you sure you want to delete this tenant?')) return;
@@ -123,13 +119,13 @@ export function TenantsClient({ orgId }: TenantsClientProps) {
                   <TableCell>{tenant.phone ?? '\u2014'}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {getPropertyNames(tenant).map((name) => (
+                      {tenant._propertyNames.map((name: string) => (
                         <Badge key={name} variant="secondary">{name}</Badge>
                       ))}
-                      {getPropertyNames(tenant).length === 0 && '\u2014'}
+                      {tenant._propertyNames.length === 0 && '\u2014'}
                     </div>
                   </TableCell>
-                  <TableCell>{getActiveLeaseCount(tenant)}</TableCell>
+                  <TableCell>{tenant._activeLeaseCount}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="icon" onClick={() => router.push(`/contacts/tenants/${tenant.id}`)}>

@@ -56,6 +56,8 @@ export function useInvoices(filters: InvoiceFilters) {
         query = query.lte('due_date', filters.to);
       }
 
+      query = query.limit(500);
+
       const { data, error } = await query;
       if (error) throw error;
 

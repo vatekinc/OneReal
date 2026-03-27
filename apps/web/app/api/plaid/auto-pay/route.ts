@@ -32,41 +32,45 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ processed: 0 });
   }
 
+  // Batch-fetch bank accounts and org statuses upfront to avoid N+1 queries
+  const tenantIds = [...new Set(openInvoices.map((inv: any) => inv.tenant_id))];
+  const orgIds = [...new Set(openInvoices.map((inv: any) => inv.org_id))];
+
+  const [{ data: banks }, { data: orgs }] = await Promise.all([
+    db.from('tenant_bank_accounts')
+      .select('tenant_id, org_id, plaid_access_token_encrypted, plaid_account_id, auto_pay_enabled')
+      .eq('auto_pay_enabled', true)
+      .in('tenant_id', tenantIds)
+      .in('org_id', orgIds),
+    db.from('organizations')
+      .select('id, plaid_status')
+      .in('id', orgIds),
+  ]);
+
+  const bankMap = new Map((banks ?? []).map((b: any) => [`${b.tenant_id}:${b.org_id}`, b]));
+  const orgMap = new Map((orgs ?? []).map((o: any) => [o.id, o]));
+
   let processed = 0;
   let errors = 0;
 
   for (const inv of openInvoices) {
     const invoice = inv as any;
 
-    // Check if tenant has auto-pay enabled for this org
-    const { data: bank } = await db
-      .from('tenant_bank_accounts')
-      .select('plaid_access_token_encrypted, plaid_account_id, auto_pay_enabled')
-      .eq('tenant_id', invoice.tenant_id)
-      .eq('org_id', invoice.org_id)
-      .eq('auto_pay_enabled', true)
-      .maybeSingle();
-
+    const bank = bankMap.get(`${invoice.tenant_id}:${invoice.org_id}`);
     if (!bank) continue;
 
-    // Check org has Plaid active
-    const { data: org } = await db
-      .from('organizations')
-      .select('plaid_status')
-      .eq('id', invoice.org_id)
-      .single();
-
-    if ((org as any)?.plaid_status !== 'active') continue;
+    const org = orgMap.get(invoice.org_id);
+    if (org?.plaid_status !== 'active') continue;
 
     try {
       const remaining = Number(invoice.amount) - Number(invoice.amount_paid);
       const totalDebit = remaining + 1.0; // $1 flat fee
-      const accessToken = decryptPlaidToken((bank as any).plaid_access_token_encrypted);
+      const accessToken = decryptPlaidToken(bank.plaid_access_token_encrypted);
 
       // Authorize
       const authResponse = await plaid.transferAuthorizationCreate({
         access_token: accessToken,
-        account_id: (bank as any).plaid_account_id,
+        account_id: bank.plaid_account_id,
         type: TransferType.Debit,
         network: TransferNetwork.Ach,
         amount: totalDebit.toFixed(2),
@@ -83,7 +87,7 @@ export async function POST(req: NextRequest) {
       // Create transfer (type/network/ach_class/user deprecated in transferCreate)
       const transferResponse = await plaid.transferCreate({
         access_token: accessToken,
-        account_id: (bank as any).plaid_account_id,
+        account_id: bank.plaid_account_id,
         authorization_id: authResponse.data.authorization.id,
         amount: totalDebit.toFixed(2),
         description: `Auto ${invoice.invoice_number}`.slice(0, 15),

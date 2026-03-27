@@ -229,13 +229,18 @@ async function handleInvoicePaymentFailed(db: any, stripeInvoice: Stripe.Invoice
 }
 
 async function handleSubscriptionDeleted(db: any, subscription: Stripe.Subscription) {
-  const { data: freePlan } = await db
+  const { data: freePlan, error: planError } = await db
     .from('plans')
     .select('id')
     .eq('is_default', true)
+    .order('created_at', { ascending: true })
+    .limit(1)
     .single();
 
-  if (!freePlan) return;
+  if (planError || !freePlan) {
+    console.error('No default plan found — cannot downgrade subscription', planError);
+    return;
+  }
 
   await db.from('organizations').update({
     plan_id: (freePlan as any).id,

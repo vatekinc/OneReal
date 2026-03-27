@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { cn } from '@onereal/ui';
 import type { CollectionRatePoint } from '@onereal/types';
@@ -17,17 +18,23 @@ export function CollectionRateCard({ data }: CollectionRateCardProps) {
     );
   }
 
-  // Weighted average collection rate
-  const totalInvoiced = data.reduce((sum, p) => sum + p.invoiced_amount, 0);
-  const totalCollected = data.reduce((sum, p) => sum + p.collected_amount, 0);
-  const avgRate = totalInvoiced > 0 ? Math.round((totalCollected / totalInvoiced) * 100) : 0;
+  // Weighted average collection rate — single pass + memoized chart data
+  const { avgRate, chartData } = useMemo(() => {
+    let invoiced = 0;
+    let collected = 0;
+    const points = data.map((p, i) => {
+      invoiced += p.invoiced_amount;
+      collected += p.collected_amount;
+      return { i, rate: p.collection_rate };
+    });
+    const rate = invoiced > 0 ? Math.round((collected / invoiced) * 100) : 0;
+    return { avgRate: rate, chartData: points };
+  }, [data]);
 
   const rateColor =
     avgRate >= 90 ? 'text-green-600' : avgRate >= 70 ? 'text-amber-600' : 'text-red-600';
   const sparkColor =
     avgRate >= 90 ? '#22c55e' : avgRate >= 70 ? '#f59e0b' : '#ef4444';
-
-  const chartData = data.map((p, i) => ({ i, rate: p.collection_rate }));
   const gradientId = `collection-${avgRate}`;
 
   return (

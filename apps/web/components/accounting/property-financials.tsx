@@ -33,20 +33,20 @@ export function PropertyFinancials({ data }: PropertyFinancialsProps) {
     );
   }
 
-  const totals = data.reduce(
-    (acc, row) => ({
-      income: acc.income + row.income,
-      expenses: acc.expenses + row.expenses,
-      net: acc.net + row.net,
-    }),
-    { income: 0, expenses: 0, net: 0 },
-  );
+  // Single-pass: compute totals and maxAbsNet together
+  let totalIncome = 0, totalExpenses = 0, totalNet = 0, maxAbsNet = 1;
+  for (const row of data) {
+    totalIncome += row.income;
+    totalExpenses += row.expenses;
+    totalNet += row.net;
+    const absNet = Math.abs(row.net);
+    if (absNet > maxAbsNet) maxAbsNet = absNet;
+  }
+  const totals = { income: totalIncome, expenses: totalExpenses, net: totalNet };
 
   const totalRoi = totals.income > 0
     ? Math.round((totals.net / totals.income) * 100 * 100) / 100
     : 0;
-
-  const maxAbsNet = Math.max(...data.map((r) => Math.abs(r.net)), 1);
 
   return (
     <Table>
