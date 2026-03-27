@@ -6,7 +6,6 @@ import { cn, Button, Input } from '@onereal/ui';
 const DATE_RANGES = [
   { value: 'current_month', label: 'This Month' },
   { value: 'last_month', label: 'Last Month' },
-  { value: 'ytd', label: 'YTD' },
   { value: 'current_year', label: 'This Year' },
   { value: '3yr', label: '3yr' },
   { value: '5yr', label: '5yr' },
@@ -58,10 +57,11 @@ export interface DateRangeValue {
 
 interface DateRangeFilterClientProps {
   onChange: (value: DateRangeValue) => void;
+  exclude?: string[];
 }
 
-export function DateRangeFilterClient({ onChange }: DateRangeFilterClientProps) {
-  const [activeRange, setActiveRange] = useState('current_month');
+export function DateRangeFilterClient({ onChange, exclude }: DateRangeFilterClientProps) {
+  const [activeRange, setActiveRange] = useState('current_year');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
 
@@ -87,13 +87,13 @@ export function DateRangeFilterClient({ onChange }: DateRangeFilterClientProps) 
 
   // Emit initial value on mount
   useEffect(() => {
-    onChange(computeDateRange('current_month'));
+    onChange(computeDateRange('current_year'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {DATE_RANGES.map((r) => (
+      {DATE_RANGES.filter((r) => !exclude?.includes(r.value)).map((r) => (
         <Button
           key={r.value}
           variant={activeRange === r.value ? 'default' : 'secondary'}

@@ -115,9 +115,9 @@ export default function StatementsPage() {
 
   function exportRentRoll() {
     if (!rentRollData) return;
-    const headers = ['Property', 'Tenants', 'Leases', 'Monthly Rent', 'Past Due', 'Current', 'Future', 'Credits', 'Net Due'];
+    const headers = ['Property', 'Tenants', 'Monthly Rent', 'Past Due', 'Current', 'Future', 'Credits', 'Net Due'];
     const rows = rentRollData.map((r) => [
-      r.property_name, r.tenants, String(r.lease_count),
+      r.property_name, r.tenants,
       r.total_monthly_rent.toFixed(2), r.past_due.toFixed(2),
       r.current_due.toFixed(2), r.future_due.toFixed(2),
       r.credit_balance.toFixed(2), r.net_due.toFixed(2),
@@ -129,7 +129,7 @@ export default function StatementsPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Statements</h1>
 
-      <Tabs defaultValue="tenant">
+      <Tabs defaultValue="rent-roll">
         <TabsList>
           <TabsTrigger value="tenant">Tenant Statement</TabsTrigger>
           <TabsTrigger value="property">Property Statement</TabsTrigger>

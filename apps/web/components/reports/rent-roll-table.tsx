@@ -22,7 +22,6 @@ export function RentRollTable({ data, leaseStatus = 'active' }: { data: RentRoll
     );
   }
 
-  const totalLeases = data.reduce((sum, r) => sum + r.lease_count, 0);
   const totalRent = data.reduce((sum, r) => sum + r.total_monthly_rent, 0);
   const totalPastDue = data.reduce((sum, r) => sum + r.past_due, 0);
   const totalCurrentDue = data.reduce((sum, r) => sum + r.current_due, 0);
@@ -36,7 +35,6 @@ export function RentRollTable({ data, leaseStatus = 'active' }: { data: RentRoll
         <TableRow>
           <TableHead>Property</TableHead>
           <TableHead>Tenants</TableHead>
-          <TableHead className="text-right">Leases</TableHead>
           <TableHead className="text-right">Monthly Rent</TableHead>
           <TableHead className="text-right">Past Due</TableHead>
           <TableHead className="text-right">Current</TableHead>
@@ -50,7 +48,6 @@ export function RentRollTable({ data, leaseStatus = 'active' }: { data: RentRoll
           <TableRow key={row.property_id}>
             <TableCell className="font-medium">{row.property_name}</TableCell>
             <TableCell className="text-sm text-muted-foreground">{row.tenants}</TableCell>
-            <TableCell className="text-right">{row.lease_count}</TableCell>
             <TableCell className="text-right">{formatCurrency(row.total_monthly_rent)}</TableCell>
             <TableCell className={`text-right ${row.past_due > 0 ? 'text-red-600' : ''}`}>
               {formatCurrency(row.past_due)}
@@ -64,7 +61,6 @@ export function RentRollTable({ data, leaseStatus = 'active' }: { data: RentRoll
         <TableRow className="border-t-2 font-bold">
           <TableCell className="font-bold">Total</TableCell>
           <TableCell />
-          <TableCell className="text-right font-bold">{totalLeases}</TableCell>
           <TableCell className="text-right font-bold">{formatCurrency(totalRent)}</TableCell>
           <TableCell className={`text-right font-bold ${totalPastDue > 0 ? 'text-red-600' : ''}`}>
             {formatCurrency(totalPastDue)}
