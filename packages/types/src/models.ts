@@ -467,6 +467,41 @@ export interface CollectionRatePoint {
   collection_rate: number;
 }
 
+// ── Statements & Rent Roll ──────────────────────────────────
+
+export interface TenantStatementRow {
+  txn_date: string;
+  sort_key: number;
+  txn_type: 'charge' | 'late_fee' | 'payment' | 'credit' | 'credit_applied';
+  description: string;
+  reference: string;
+  charge_amount: number;
+  payment_amount: number;
+  running_balance: number;
+}
+
+export interface PropertyStatementRow {
+  txn_date: string;
+  sort_key: number;
+  txn_type: 'rent_charge' | 'rent_payment' | 'credit_issued' | 'credit_applied' | 'expense_bill' | 'expense_payment' | 'income' | 'expense';
+  tenant_or_vendor: string | null;
+  description: string;
+  income_amount: number;
+  expense_amount: number;
+  running_balance: number;
+}
+
+export interface RentRollRow {
+  tenant_id: string;
+  first_name: string;
+  last_name: string;
+  lease_count: number;
+  total_monthly_rent: number;
+  balance_due: number;
+  credit_balance: number;
+  net_due: number;
+}
+
 // --- Plan types ---
 
 export interface PlanFeatures {
