@@ -106,7 +106,7 @@ const NavLink = memo(function NavLink({
         {expanded && (
           <div className="ml-4 mt-1 flex flex-col gap-1 border-l pl-3">
             {item.children!.map((child) => {
-              const isChildActive = child.href === '/accounting'
+              const isChildActive = child.href === '/accounting' || child.href === '/reports'
                 ? pathname === child.href
                 : pathname.startsWith(child.href);
               return (
