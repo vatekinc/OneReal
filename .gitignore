@@ -11,4 +11,5 @@ next-env.d.ts
 node_modules
 test-results/
 playwright-report/
+e2e/.auth/
 .superpowers/
