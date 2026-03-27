@@ -47,7 +47,8 @@ export default function StatementsPage() {
 
   // ── Data fetching ──
   const { data: tenants } = useTenants({ orgId });
-  const { data: allProperties } = useProperties({ orgId });
+  const { data: propertiesResult } = useProperties({ orgId });
+  const allProperties = propertiesResult?.data ?? [];
 
   const tenantDateRangeEffective = tenantDateRange.from && tenantDateRange.to
     ? { from: tenantDateRange.from, to: tenantDateRange.to }
@@ -184,7 +185,7 @@ export default function StatementsPage() {
                 <Select value={propertyId} onValueChange={setPropertyId}>
                   <SelectTrigger className="w-[200px]"><SelectValue placeholder="Select Property" /></SelectTrigger>
                   <SelectContent>
-                    {(allProperties ?? []).map((p: any) => (
+                    {allProperties.map((p: any) => (
                       <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -226,7 +227,7 @@ export default function StatementsPage() {
                   <SelectTrigger className="w-[200px]"><SelectValue placeholder="All Properties" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Properties</SelectItem>
-                    {(allProperties ?? []).map((p: any) => (
+                    {allProperties.map((p: any) => (
                       <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}
                   </SelectContent>
