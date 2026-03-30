@@ -5,14 +5,15 @@ import { useUser } from '@onereal/auth';
 import { getOrgPlan, createClient } from '@onereal/database';
 import { useTenantConversations } from '@onereal/messaging';
 import { createTenantConversation } from '@onereal/messaging/actions/create-tenant-conversation';
+import { createSupportConversation } from '@onereal/messaging/actions/create-support-conversation';
 import { useTenantLease } from '@onereal/tenant-portal';
 import { MessageThread } from '@/components/messaging/message-thread';
 import {
-  Button, ScrollArea, cn,
+  Button, ScrollArea, Badge, cn,
   Dialog, DialogContent, DialogHeader, DialogTitle,
   Textarea,
 } from '@onereal/ui';
-import { Plus, MessageSquare, ArrowLeft } from 'lucide-react';
+import { Plus, MessageSquare, ArrowLeft, Headphones } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -35,7 +36,9 @@ export default function TenantMessagesPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<'list' | 'thread'>('list');
   const [newDialogOpen, setNewDialogOpen] = useState(false);
+  const [supportDialogOpen, setSupportDialogOpen] = useState(false);
   const [newMessage, setNewMessage] = useState('');
+  const [supportMessage, setSupportMessage] = useState('');
   const [creating, setCreating] = useState(false);
 
   const { data: conversations, isLoading } = useTenantConversations();
@@ -97,6 +100,31 @@ export default function TenantMessagesPage() {
     setCreating(false);
   }
 
+  async function handleContactSupport() {
+    if (!activeOrg || !supportMessage.trim()) return;
+    setCreating(true);
+
+    try {
+      const result = await createSupportConversation(activeOrg.id, {
+        initial_message: supportMessage.trim(),
+      });
+
+      if (result.success) {
+        toast.success('Support message sent');
+        queryClient.invalidateQueries({ queryKey: ['tenant-conversations'] });
+        setSelectedId(result.data.id);
+        setMobileView('thread');
+        setSupportDialogOpen(false);
+        setSupportMessage('');
+      } else {
+        toast.error(result.error);
+      }
+    } catch {
+      toast.error('Failed to send support message');
+    }
+    setCreating(false);
+  }
+
   if (messagingAllowed === null) return null;
 
   if (messagingAllowed === false) {
@@ -123,9 +151,14 @@ export default function TenantMessagesPage() {
       )}>
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="font-semibold">Messages</h2>
-          <Button size="sm" variant="outline" onClick={() => setNewDialogOpen(true)} disabled={!lease}>
-            <Plus className="h-4 w-4" />
-          </Button>
+          <div className="flex gap-1">
+            <Button size="sm" variant="outline" onClick={() => setSupportDialogOpen(true)} title="Contact Support">
+              <Headphones className="h-4 w-4" />
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setNewDialogOpen(true)} disabled={!lease}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         <ScrollArea className="flex-1">
           {isLoading ? (
@@ -156,9 +189,14 @@ export default function TenantMessagesPage() {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className={cn('text-sm truncate', unread && 'font-semibold')}>
-                          {getOtherParticipant(conv)}
-                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <p className={cn('text-sm truncate', unread && 'font-semibold')}>
+                            {getOtherParticipant(conv)}
+                          </p>
+                          {conv.type === 'support' && (
+                            <Badge variant="secondary" className="text-[10px] px-1 py-0 shrink-0">Support</Badge>
+                          )}
+                        </div>
                         {conv.properties && (
                           <p className="text-xs text-muted-foreground truncate">
                             {conv.properties.name}
@@ -228,6 +266,36 @@ export default function TenantMessagesPage() {
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setNewDialogOpen(false)}>Cancel</Button>
               <Button onClick={handleNewConversation} disabled={!newMessage.trim() || creating}>
+                Send
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Contact Support Dialog */}
+      <Dialog open={supportDialogOpen} onOpenChange={setSupportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Contact Support</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Send a message to the OneReal support team. We&apos;ll get back to you as soon as possible.
+            </p>
+            <div>
+              <label className="text-sm font-medium">Message *</label>
+              <Textarea
+                className="mt-1"
+                placeholder="How can we help you?"
+                rows={4}
+                value={supportMessage}
+                onChange={(e) => setSupportMessage(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setSupportDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleContactSupport} disabled={!supportMessage.trim() || creating}>
                 Send
               </Button>
             </div>

@@ -2,18 +2,21 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { cn } from '@onereal/ui';
-import { LayoutDashboard, Building2, CreditCard, Users, ArrowLeft } from 'lucide-react';
+import { cn, Badge } from '@onereal/ui';
+import { useSupportUnreadCount } from '@onereal/messaging';
+import { LayoutDashboard, Building2, CreditCard, Users, ArrowLeft, Headphones } from 'lucide-react';
 
 const adminNavItems = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { label: 'Organizations', href: '/admin/organizations', icon: Building2 },
   { label: 'Plans', href: '/admin/plans', icon: CreditCard },
   { label: 'Users', href: '/admin/users', icon: Users },
+  { label: 'Support', href: '/admin/support', icon: Headphones },
 ];
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const { data: supportUnread } = useSupportUnreadCount();
 
   function isActive(href: string) {
     if (href === '/admin') return pathname === '/admin';
@@ -36,6 +39,7 @@ export function AdminSidebar() {
           {adminNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
+            const unreadCount = item.href === '/admin/support' ? Number(supportUnread ?? 0) : 0;
             return (
               <Link
                 key={item.href}
@@ -48,7 +52,12 @@ export function AdminSidebar() {
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" />
-                <span>{item.label}</span>
+                <span className="flex-1">{item.label}</span>
+                {unreadCount > 0 && (
+                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0 ml-auto">
+                    {unreadCount}
+                  </Badge>
+                )}
               </Link>
             );
           })}
