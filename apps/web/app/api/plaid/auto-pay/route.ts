@@ -47,8 +47,8 @@ export async function POST(req: NextRequest) {
       .in('id', orgIds),
   ]);
 
-  const bankMap = new Map((banks ?? []).map((b: any) => [`${b.tenant_id}:${b.org_id}`, b]));
-  const orgMap = new Map((orgs ?? []).map((o: any) => [o.id, o]));
+  const bankMap = new Map<string, any>((banks ?? []).map((b: any) => [`${b.tenant_id}:${b.org_id}`, b]));
+  const orgMap = new Map<string, any>((orgs ?? []).map((o: any) => [o.id, o]));
 
   let processed = 0;
   let errors = 0;
