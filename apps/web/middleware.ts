@@ -77,8 +77,9 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Onboarding check (use shared profile)
-  if (user && !isOnboarding && !isPublicPath && !profile?.onboarding_completed) {
+  // Onboarding check — only redirect if profile exists and onboarding is explicitly not completed
+  // (If profile query failed, let the user through rather than looping to onboarding)
+  if (user && !isOnboarding && !isPublicPath && profile && !profile.onboarding_completed) {
     const url = request.nextUrl.clone();
     url.pathname = '/onboarding';
     return NextResponse.redirect(url);
