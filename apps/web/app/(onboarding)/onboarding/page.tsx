@@ -89,8 +89,9 @@ function OnboardingContent() {
       }
 
       setStep(2);
-    } catch {
-      toast.error('Failed to save profile');
+    } catch (err: any) {
+      console.error('Onboarding profile save error:', err);
+      toast.error(err?.message || 'Failed to save profile');
     }
   }
 
