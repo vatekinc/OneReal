@@ -16,11 +16,13 @@ export function resolveDateRange(
   switch (range ?? 'current_year') {
     case 'current_month': {
       const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      return { from: firstOfMonth.toISOString().split('T')[0], to: toDate };
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      return { from: firstOfMonth.toISOString().split('T')[0], to: endOfMonth.toISOString().split('T')[0] };
     }
     case 'current_year': {
       const firstOfYear = new Date(now.getFullYear(), 0, 1);
-      return { from: firstOfYear.toISOString().split('T')[0], to: toDate };
+      const endOfYear = new Date(now.getFullYear(), 11, 31);
+      return { from: firstOfYear.toISOString().split('T')[0], to: endOfYear.toISOString().split('T')[0] };
     }
     case '3yr': {
       const threeYearsAgo = new Date(now.getFullYear() - 3, now.getMonth(), now.getDate());
