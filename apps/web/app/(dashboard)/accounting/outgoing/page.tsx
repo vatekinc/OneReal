@@ -48,6 +48,7 @@ export default function OutgoingPage() {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [dialogMode, setDialogMode] = useState<'create' | 'edit' | 'clone'>('create');
 
   const { data: propertiesData } = useProperties({ orgId: activeOrg?.id ?? null });
   const properties = (propertiesData?.data ?? []) as any[];
@@ -80,6 +81,13 @@ export default function OutgoingPage() {
 
   function handleEdit(invoice: Invoice) {
     setSelectedInvoice(invoice);
+    setDialogMode('edit');
+    setInvoiceDialogOpen(true);
+  }
+
+  function handleClone(invoice: Invoice) {
+    setSelectedInvoice(invoice);
+    setDialogMode('clone');
     setInvoiceDialogOpen(true);
   }
 
@@ -108,6 +116,7 @@ export default function OutgoingPage() {
 
   function handleNewInvoice() {
     setSelectedInvoice(null);
+    setDialogMode('create');
     setInvoiceDialogOpen(true);
   }
 
@@ -192,6 +201,7 @@ export default function OutgoingPage() {
           direction="payable"
           onPay={handlePay}
           onEdit={handleEdit}
+          onClone={handleClone}
           onVoid={handleVoid}
           onDelete={handleDelete}
         />
@@ -202,6 +212,7 @@ export default function OutgoingPage() {
         onOpenChange={setInvoiceDialogOpen}
         invoice={selectedInvoice}
         defaultDirection="payable"
+        mode={dialogMode}
       />
       <PaymentDialog
         open={paymentDialogOpen}

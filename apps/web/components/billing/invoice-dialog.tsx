@@ -25,9 +25,10 @@ interface InvoiceDialogProps {
   onOpenChange: (open: boolean) => void;
   invoice: Invoice | null;
   defaultDirection: 'receivable' | 'payable';
+  mode?: 'create' | 'edit' | 'clone';
 }
 
-export function InvoiceDialog({ open, onOpenChange, invoice, defaultDirection }: InvoiceDialogProps) {
+export function InvoiceDialog({ open, onOpenChange, invoice, defaultDirection, mode }: InvoiceDialogProps) {
   const queryClient = useQueryClient();
   const { activeOrg } = useUser();
   const { data: propertiesData } = useProperties({ orgId: activeOrg?.id ?? null });
@@ -125,12 +126,13 @@ export function InvoiceDialog({ open, onOpenChange, invoice, defaultDirection }:
       return;
     }
 
-    const result = invoice
-      ? await updateInvoice(invoice.id, values)
+    const isEditing = mode === 'edit';
+    const result = isEditing
+      ? await updateInvoice(invoice!.id, values)
       : await createInvoice(activeOrg.id, values);
 
     if (result.success) {
-      toast.success(invoice ? 'Invoice updated' : 'Invoice created');
+      toast.success(isEditing ? 'Invoice updated' : 'Invoice created');
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['financial-stats'] });
       onOpenChange(false);
@@ -139,16 +141,19 @@ export function InvoiceDialog({ open, onOpenChange, invoice, defaultDirection }:
     }
   }
 
-  const isEditing = !!invoice;
+  const resolvedMode = mode ?? (invoice ? 'edit' : 'create');
+  const dialogTitle = resolvedMode === 'edit'
+    ? (direction === 'receivable' ? 'Edit Invoice' : 'Edit Bill')
+    : resolvedMode === 'clone'
+      ? (direction === 'receivable' ? 'Clone Invoice' : 'Clone Bill')
+      : (direction === 'receivable' ? 'New Invoice' : 'New Bill');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {isEditing
-              ? (direction === 'receivable' ? 'Edit Invoice' : 'Edit Bill')
-              : (direction === 'receivable' ? 'New Invoice' : 'New Bill')}
+            {dialogTitle}
           </DialogTitle>
         </DialogHeader>
         <Form {...form}>
@@ -285,7 +290,7 @@ export function InvoiceDialog({ open, onOpenChange, invoice, defaultDirection }:
 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit">{isEditing ? 'Update' : 'Create'}</Button>
+              <Button type="submit">{resolvedMode === 'edit' ? 'Update' : 'Create'}</Button>
             </div>
           </form>
         </Form>

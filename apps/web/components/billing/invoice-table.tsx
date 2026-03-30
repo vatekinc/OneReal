@@ -5,7 +5,7 @@ import {
   Button,
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@onereal/ui';
-import { MoreHorizontal, Pencil, DollarSign, Ban, Trash2, CreditCard } from 'lucide-react';
+import { MoreHorizontal, Pencil, DollarSign, Ban, Trash2, CreditCard, Copy } from 'lucide-react';
 import type { Invoice } from '@onereal/types';
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -24,10 +24,11 @@ interface InvoiceTableProps {
   onEdit: (invoice: Invoice) => void;
   onVoid: (invoice: Invoice) => void;
   onDelete: (invoice: Invoice) => void;
+  onClone: (invoice: Invoice) => void;
   onApplyCredit?: (invoice: Invoice) => void;
 }
 
-export function InvoiceTable({ invoices, direction, onPay, onEdit, onVoid, onDelete, onApplyCredit }: InvoiceTableProps) {
+export function InvoiceTable({ invoices, direction, onPay, onEdit, onVoid, onDelete, onClone, onApplyCredit }: InvoiceTableProps) {
   return (
     <div className="rounded-lg border">
       <Table>
@@ -92,6 +93,9 @@ export function InvoiceTable({ invoices, direction, onPay, onEdit, onVoid, onDel
                         <Pencil className="h-4 w-4" />
                       </Button>
                     )}
+                    <Button variant="ghost" size="icon" onClick={() => onClone(inv)} title="Clone">
+                      <Copy className="h-4 w-4" />
+                    </Button>
                     {canVoid && (
                       <Button variant="ghost" size="icon" onClick={() => onVoid(inv)} title="Void">
                         <Ban className="h-4 w-4 text-destructive" />

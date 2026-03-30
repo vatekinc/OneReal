@@ -50,6 +50,7 @@ export default function IncomingPage() {
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
   const [applyCreditDialogOpen, setApplyCreditDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [dialogMode, setDialogMode] = useState<'create' | 'edit' | 'clone'>('create');
 
   const { data: propertiesData } = useProperties({ orgId: activeOrg?.id ?? null });
   const properties = (propertiesData?.data ?? []) as any[];
@@ -82,6 +83,13 @@ export default function IncomingPage() {
 
   function handleEdit(invoice: Invoice) {
     setSelectedInvoice(invoice);
+    setDialogMode('edit');
+    setInvoiceDialogOpen(true);
+  }
+
+  function handleClone(invoice: Invoice) {
+    setSelectedInvoice(invoice);
+    setDialogMode('clone');
     setInvoiceDialogOpen(true);
   }
 
@@ -115,6 +123,7 @@ export default function IncomingPage() {
 
   function handleNewInvoice() {
     setSelectedInvoice(null);
+    setDialogMode('create');
     setInvoiceDialogOpen(true);
   }
 
@@ -199,6 +208,7 @@ export default function IncomingPage() {
           direction="receivable"
           onPay={handlePay}
           onEdit={handleEdit}
+          onClone={handleClone}
           onVoid={handleVoid}
           onDelete={handleDelete}
           onApplyCredit={handleApplyCredit}
@@ -210,6 +220,7 @@ export default function IncomingPage() {
         onOpenChange={setInvoiceDialogOpen}
         invoice={selectedInvoice}
         defaultDirection="receivable"
+        mode={dialogMode}
       />
       <PaymentDialog
         open={paymentDialogOpen}
