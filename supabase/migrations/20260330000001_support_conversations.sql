@@ -5,11 +5,19 @@
 -- 1. Add type column to conversations
 -- ========================================
 
-ALTER TABLE public.conversations
-  ADD COLUMN type TEXT NOT NULL DEFAULT 'general'
-  CHECK (type IN ('general', 'support'));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'conversations' AND column_name = 'type'
+  ) THEN
+    ALTER TABLE public.conversations
+      ADD COLUMN type TEXT NOT NULL DEFAULT 'general'
+      CHECK (type IN ('general', 'support'));
+  END IF;
+END $$;
 
-CREATE INDEX idx_conversations_type ON public.conversations(type);
+CREATE INDEX IF NOT EXISTS idx_conversations_type ON public.conversations(type);
 
 -- ========================================
 -- 2. RPC: Create support conversation
@@ -181,6 +189,7 @@ GRANT EXECUTE ON FUNCTION public.get_support_unread_count() TO authenticated;
 -- 5. RLS: Platform admins can view support conversations
 -- ========================================
 
+DROP POLICY IF EXISTS "Platform admins can view support conversations" ON public.conversations;
 CREATE POLICY "Platform admins can view support conversations"
   ON public.conversations FOR SELECT
   USING (
@@ -191,6 +200,7 @@ CREATE POLICY "Platform admins can view support conversations"
     )
   );
 
+DROP POLICY IF EXISTS "Platform admins can view support participants" ON public.conversation_participants;
 CREATE POLICY "Platform admins can view support participants"
   ON public.conversation_participants FOR SELECT
   USING (
@@ -204,6 +214,7 @@ CREATE POLICY "Platform admins can view support participants"
     )
   );
 
+DROP POLICY IF EXISTS "Platform admins can view support messages" ON public.messages;
 CREATE POLICY "Platform admins can view support messages"
   ON public.messages FOR SELECT
   USING (
