@@ -1,6 +1,7 @@
 import { Badge } from '@onereal/ui';
 import type { RecentTransaction } from '@onereal/types';
 import Link from 'next/link';
+import { formatDate } from '@/lib/format-date';
 
 interface RecentTransactionsProps {
   transactions: RecentTransaction[];
@@ -26,7 +27,7 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
             <div className="flex flex-col">
               <span className="text-sm font-medium">{t.description}</span>
               <span className="text-xs text-muted-foreground">
-                {t.property_name} &middot; {new Date(t.transaction_date).toLocaleDateString()}
+                {t.property_name} &middot; {formatDate(t.transaction_date)}
               </span>
             </div>
           </div>

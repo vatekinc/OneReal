@@ -15,6 +15,7 @@ import {
 } from '@onereal/ui';
 import { ArrowLeft, Pencil, Plus, Trash2, Mail, Phone, AlertTriangle, Send, CheckCircle, Clock, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
+import { formatDate } from '@/lib/format-date';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -198,8 +199,8 @@ export default function TenantDetailPage() {
                   <TableRow key={lease.id}>
                     <TableCell>{lease.units?.properties?.name ?? '\u2014'}</TableCell>
                     <TableCell>{lease.units?.unit_number ?? '\u2014'}</TableCell>
-                    <TableCell>{lease.start_date ? new Date(lease.start_date).toLocaleDateString() : '\u2014'}</TableCell>
-                    <TableCell>{lease.end_date ? new Date(lease.end_date).toLocaleDateString() : '\u2014'}</TableCell>
+                    <TableCell>{formatDate(lease.start_date)}</TableCell>
+                    <TableCell>{formatDate(lease.end_date)}</TableCell>
                     <TableCell className="text-right font-medium">
                       {lease.rent_amount ? `$${Number(lease.rent_amount).toLocaleString()}` : '\u2014'}
                     </TableCell>

@@ -15,6 +15,7 @@ import { LeaseDialog } from '@/components/contacts/lease-dialog';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { formatDate } from '@/lib/format-date';
 import { useRecurringExpenses } from '@onereal/accounting';
 import { updateRecurringExpense } from '@onereal/accounting/actions/update-recurring-expense';
 import { deleteRecurringExpense } from '@onereal/accounting/actions/delete-recurring-expense';
@@ -171,8 +172,8 @@ function PropertyLeases({ propertyId }: { propertyId: string }) {
                     ) : '\u2014'}
                   </TableCell>
                   <TableCell>{lease.units?.unit_number ?? '\u2014'}</TableCell>
-                  <TableCell>{lease.start_date ? new Date(lease.start_date).toLocaleDateString() : '\u2014'}</TableCell>
-                  <TableCell>{lease.end_date ? new Date(lease.end_date).toLocaleDateString() : '\u2014'}</TableCell>
+                  <TableCell>{formatDate(lease.start_date)}</TableCell>
+                  <TableCell>{formatDate(lease.end_date)}</TableCell>
                   <TableCell className="text-right font-medium">
                     {lease.rent_amount ? `$${Number(lease.rent_amount).toLocaleString()}` : '\u2014'}
                   </TableCell>

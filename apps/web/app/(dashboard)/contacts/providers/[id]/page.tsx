@@ -12,6 +12,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@onereal/ui';
 import { ArrowLeft, Pencil, Mail, Phone, Building2 } from 'lucide-react';
+import { formatDate } from '@/lib/format-date';
 
 const providerCategoryLabels: Record<string, string> = {
   plumber: 'Plumber',
@@ -121,7 +122,7 @@ export default function ProviderDetailPage() {
               <TableBody>
                 {expenses.map((expense: any) => (
                   <TableRow key={expense.id}>
-                    <TableCell>{new Date(expense.transaction_date).toLocaleDateString()}</TableCell>
+                    <TableCell>{formatDate(expense.transaction_date)}</TableCell>
                     <TableCell>{expense.properties?.name ?? '\u2014'}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">

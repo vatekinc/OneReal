@@ -16,6 +16,7 @@ import {
 import { Plus } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { formatDate } from '@/lib/format-date';
 
 const priorityColors: Record<string, string> = {
   low: 'bg-gray-100 text-gray-800',
@@ -140,7 +141,7 @@ export default function TenantMaintenancePage() {
                   <span>Property: {req.units?.properties?.name ?? '—'}</span>
                   <span>Unit: {req.units?.unit_number ?? '—'}</span>
                   <span>Submitted: {new Date(req.created_at).toLocaleDateString()}</span>
-                  {req.scheduled_date && <span>Scheduled: {new Date(req.scheduled_date).toLocaleDateString()}</span>}
+                  {req.scheduled_date && <span>Scheduled: {formatDate(req.scheduled_date)}</span>}
                 </div>
                 {req.description && (
                   <p className="mt-2 text-sm">{req.description}</p>

@@ -20,6 +20,7 @@ import { createClient } from '@onereal/database';
 import { useSearchParams } from 'next/navigation';
 import { CreditCard, Landmark } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { formatDate } from '@/lib/format-date';
 
 const PlaidLinkButton = dynamic(
   () => import('../../../../components/payments/plaid-link-button').then((m) => ({ default: m.PlaidLinkButton })),
@@ -316,7 +317,7 @@ function TenantPaymentsContent() {
                           ${Number(inv.amount).toLocaleString()}
                         </TableCell>
                         <TableCell>
-                          {inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '—'}
+                          {formatDate(inv.due_date)}
                         </TableCell>
                         <TableCell>
                           <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[inv.status === 'processing' ? 'processing' : inv.displayStatus] ?? ''}`}>

@@ -5,6 +5,7 @@ import {
   Card, CardContent, CardHeader, CardTitle, Badge,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@onereal/ui';
+import { formatDate } from '@/lib/format-date';
 
 export default function TenantLeasePage() {
   const { data: lease, isLoading } = useTenantLease();
@@ -70,13 +71,13 @@ export default function TenantLeasePage() {
             <div>
               <p className="text-sm text-muted-foreground">Start Date</p>
               <p className="font-medium">
-                {lease.start_date ? new Date(lease.start_date).toLocaleDateString() : '—'}
+                {formatDate(lease.start_date)}
               </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">End Date</p>
               <p className="font-medium">
-                {lease.end_date ? new Date(lease.end_date).toLocaleDateString() : 'Ongoing'}
+                {lease.end_date ? formatDate(lease.end_date) : 'Ongoing'}
               </p>
             </div>
             <div>

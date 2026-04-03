@@ -7,6 +7,7 @@ import {
 } from '@onereal/ui';
 import { MoreHorizontal } from 'lucide-react';
 import type { Credit } from '@onereal/types';
+import { formatDate } from '@/lib/format-date';
 
 const sourceLabels: Record<string, string> = {
   manual: 'Manual',
@@ -48,7 +49,7 @@ export function CreditTable({ credits, onVoid, onApply }: CreditTableProps) {
             const remaining = Number(credit.amount) - Number(credit.amount_used);
             return (
               <TableRow key={credit.id}>
-                <TableCell>{new Date(credit.created_at).toLocaleDateString()}</TableCell>
+                <TableCell>{formatDate(credit.created_at)}</TableCell>
                 <TableCell>
                   {credit.tenants ? `${credit.tenants.first_name} ${credit.tenants.last_name}` : '\u2014'}
                 </TableCell>

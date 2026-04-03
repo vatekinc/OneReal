@@ -12,6 +12,7 @@ import {
 } from '@onereal/ui';
 import { Pencil, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { formatDate } from '@/lib/format-date';
 import type { LeaseCharge } from '@onereal/types';
 
 const frequencyLabels: Record<string, string> = {
@@ -113,11 +114,11 @@ export default function LeaseDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Start Date</p>
-                  <p className="font-medium">{lease.start_date ? new Date(lease.start_date).toLocaleDateString() : '—'}</p>
+                  <p className="font-medium">{formatDate(lease.start_date)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">End Date</p>
-                  <p className="font-medium">{lease.end_date ? new Date(lease.end_date).toLocaleDateString() : '—'}</p>
+                  <p className="font-medium">{formatDate(lease.end_date)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Monthly Rent</p>

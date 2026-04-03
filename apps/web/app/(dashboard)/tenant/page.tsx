@@ -6,6 +6,7 @@ import {
   Card, CardContent, CardHeader, CardTitle, Badge,
 } from '@onereal/ui';
 import Link from 'next/link';
+import { formatDate } from '@/lib/format-date';
 
 const statusColors: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-800',
@@ -60,8 +61,8 @@ export default function TenantHomePage() {
                   {lease.units?.properties?.name ?? 'Property'}, Unit {lease.units?.unit_number ?? '—'}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {lease.start_date ? new Date(lease.start_date).toLocaleDateString() : '—'} –{' '}
-                  {lease.end_date ? new Date(lease.end_date).toLocaleDateString() : 'Ongoing'}
+                  {formatDate(lease.start_date)} –{' '}
+                  {lease.end_date ? formatDate(lease.end_date) : 'Ongoing'}
                 </p>
               </div>
               <div className="text-right">
@@ -101,7 +102,7 @@ export default function TenantHomePage() {
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">Next Due Date</p>
             <p className="text-2xl font-bold">
-              {nextDue?.due_date ? new Date(nextDue.due_date).toLocaleDateString() : '—'}
+              {formatDate(nextDue?.due_date)}
             </p>
           </CardContent>
         </Card>
@@ -124,7 +125,7 @@ export default function TenantHomePage() {
                   <div>
                     <p className="font-medium">{inv.description || `Invoice #${inv.invoice_number}`}</p>
                     <p className="text-sm text-muted-foreground">
-                      Due {inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '—'}
+                      Due {formatDate(inv.due_date)}
                     </p>
                   </div>
                   <div className="text-right flex items-center gap-3">

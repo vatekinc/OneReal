@@ -7,6 +7,7 @@ import {
 } from '@onereal/ui';
 import { MoreHorizontal, Pencil, DollarSign, Ban, Trash2, CreditCard, Copy } from 'lucide-react';
 import type { Invoice } from '@onereal/types';
+import { formatDate } from '@/lib/format-date';
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   draft: { label: 'Draft', className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
@@ -65,7 +66,7 @@ export function InvoiceTable({ invoices, direction, onPay, onEdit, onVoid, onDel
                 </TableCell>
                 <TableCell>{inv.properties?.name ?? '\u2014'}</TableCell>
                 <TableCell className={isPastDue ? 'text-destructive' : ''}>
-                  {new Date(inv.due_date).toLocaleDateString()}
+                  {formatDate(inv.due_date)}
                 </TableCell>
                 <TableCell className="text-right">
                   ${Number(inv.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
