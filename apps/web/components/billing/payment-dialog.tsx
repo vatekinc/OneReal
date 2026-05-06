@@ -3,14 +3,15 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { paymentSchema, type PaymentFormValues } from '@onereal/billing';
+import { paymentSchema, type PaymentFormValues, usePayments } from '@onereal/billing';
 import { recordPayment } from '@onereal/billing/actions/record-payment';
+import { voidPayment } from '@onereal/billing/actions/void-payment';
 import { useUser } from '@onereal/auth';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
   Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-  Textarea, Button,
+  Textarea, Button, Badge,
 } from '@onereal/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -36,6 +37,27 @@ export function PaymentDialog({ open, onOpenChange, invoice }: PaymentDialogProp
   const { activeOrg } = useUser();
 
   const remaining = invoice ? Number(invoice.amount) - Number(invoice.amount_paid) : 0;
+
+  const { data: paymentsRaw } = usePayments(invoice?.id ?? null);
+  const payments = (paymentsRaw ?? []) as any[];
+
+  async function handleVoidPayment(paymentId: string, paymentAmount: number) {
+    if (!activeOrg) return;
+    if (!confirm(`Void this $${Number(paymentAmount).toFixed(2)} payment? The income/expense entry will be removed and the invoice balance restored.`)) return;
+    const result = await voidPayment(activeOrg.id, paymentId);
+    if (result.success) {
+      toast.success('Payment voided');
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['income'] });
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['credits'] });
+      queryClient.invalidateQueries({ queryKey: ['credit-balance'] });
+    } else {
+      toast.error(result.error);
+    }
+  }
 
   const form = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentSchema),
@@ -92,7 +114,7 @@ export function PaymentDialog({ open, onOpenChange, invoice }: PaymentDialogProp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>Record Payment</DialogTitle>
           {invoice && (
@@ -101,6 +123,33 @@ export function PaymentDialog({ open, onOpenChange, invoice }: PaymentDialogProp
             </DialogDescription>
           )}
         </DialogHeader>
+
+        {payments.length > 0 && (
+          <div className="rounded-md border p-3 space-y-2">
+            <div className="text-xs font-semibold text-muted-foreground">Payment History</div>
+            <ul className="space-y-1">
+              {payments.map((p: any) => (
+                <li key={p.id} className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-muted-foreground w-20 shrink-0">{p.payment_date}</span>
+                    <span className="font-medium">${Number(p.amount).toFixed(2)}</span>
+                    <span className="text-xs text-muted-foreground capitalize">{p.payment_method}</span>
+                    {p.reference_number && (
+                      <span className="text-xs text-muted-foreground truncate">#{p.reference_number}</span>
+                    )}
+                    {p.status === 'void' && <Badge variant="secondary">void</Badge>}
+                  </div>
+                  {p.status === 'active' && (
+                    <Button variant="ghost" size="sm" onClick={() => handleVoidPayment(p.id, p.amount)}>
+                      Void
+                    </Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
