@@ -105,16 +105,22 @@ export function InvoiceDialog({ open, onOpenChange, invoice, defaultDirection, m
   );
   const units = (selectedProperty as any)?.units ?? [];
 
-  // Filter tenants to only those with an active lease on the selected property
+  // Show tenants with ANY lease on the selected property (active or not),
+  // so expired-lease tenants can still be billed (cleaning fee, late fee, etc.).
+  // Tag tenants without an active lease so the user knows.
   const filteredTenants = useMemo(() => {
-    if (!selectedPropertyId) return tenants;
-    return tenants.filter((t: any) =>
-      t.lease_tenants?.some((lt: any) => {
-        const lease = lt.leases;
-        if (!lease || lease.status !== 'active') return false;
-        return lease.units?.property_id === selectedPropertyId;
-      }),
-    );
+    if (!selectedPropertyId) return tenants.map((t: any) => ({ ...t, _hasActiveLease: false }));
+    return tenants
+      .filter((t: any) =>
+        t.lease_tenants?.some((lt: any) => lt.leases?.units?.property_id === selectedPropertyId),
+      )
+      .map((t: any) => ({
+        ...t,
+        _hasActiveLease: t.lease_tenants?.some((lt: any) => {
+          const lease = lt.leases;
+          return lease?.status === 'active' && lease.units?.property_id === selectedPropertyId;
+        }),
+      }));
   }, [tenants, selectedPropertyId]);
 
   // Auto-select tenant when property changes and only one tenant matches
@@ -124,18 +130,24 @@ export function InvoiceDialog({ open, onOpenChange, invoice, defaultDirection, m
     }
   }, [filteredTenants, direction, form]);
 
-  // Auto-derive lease_id from selected tenant + property (active lease only)
+  // Auto-derive lease_id from selected tenant + property:
+  // prefer active, fall back to most recent matching lease.
   const selectedTenantId = form.watch('tenant_id');
   useEffect(() => {
     if (direction !== 'receivable' || !selectedTenantId || !selectedPropertyId) {
       return;
     }
     const tenant = tenants.find((t: any) => t.id === selectedTenantId);
-    const activeLeaseId = tenant?.lease_tenants?.find((lt: any) => {
-      const lease = lt.leases;
-      return lease?.status === 'active' && lease.units?.property_id === selectedPropertyId;
-    })?.leases?.id;
-    form.setValue('lease_id', activeLeaseId ?? null);
+    const matchingLeases: any[] = (tenant?.lease_tenants ?? [])
+      .filter((lt: any) => lt.leases?.units?.property_id === selectedPropertyId)
+      .map((lt: any) => lt.leases)
+      .filter(Boolean);
+    const active = matchingLeases.find((l: any) => l.status === 'active');
+    const mostRecent = [...matchingLeases].sort((a, b) =>
+      (b.start_date ?? '').localeCompare(a.start_date ?? ''),
+    )[0];
+    const lease = active ?? mostRecent;
+    form.setValue('lease_id', lease?.id ?? null);
   }, [selectedTenantId, selectedPropertyId, direction, tenants, form]);
 
   async function onSubmit(values: InvoiceFormValues) {
@@ -221,6 +233,9 @@ export function InvoiceDialog({ open, onOpenChange, invoice, defaultDirection, m
                         {filteredTenants.map((t: any) => (
                           <SelectItem key={t.id} value={t.id}>
                             {t.first_name} {t.last_name}
+                            {!t._hasActiveLease && (
+                              <span className="ml-2 text-xs text-muted-foreground">(no active lease)</span>
+                            )}
                           </SelectItem>
                         ))}
                       </SelectContent>

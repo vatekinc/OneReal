@@ -109,21 +109,34 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
   const units = (selectedProperty as any)?.units ?? [];
 
   const filteredTenants = useMemo(() => {
-    if (!selectedPropertyId) return tenants;
-    return tenants.filter((t: any) =>
-      t.lease_tenants?.some((lt: any) => lt.leases?.units?.property_id === selectedPropertyId),
-    );
+    if (!selectedPropertyId) return tenants.map((t: any) => ({ ...t, _hasActiveLease: false }));
+    return tenants
+      .filter((t: any) =>
+        t.lease_tenants?.some((lt: any) => lt.leases?.units?.property_id === selectedPropertyId),
+      )
+      .map((t: any) => ({
+        ...t,
+        _hasActiveLease: t.lease_tenants?.some((lt: any) => {
+          const lease = lt.leases;
+          return lease?.status === 'active' && lease.units?.property_id === selectedPropertyId;
+        }),
+      }));
   }, [tenants, selectedPropertyId]);
 
   const selectedTenantId = form.watch('tenant_id');
   useEffect(() => {
     if (!selectedTenantId || !selectedPropertyId) return;
     const tenant = tenants.find((t: any) => t.id === selectedTenantId);
-    const activeLeaseId = tenant?.lease_tenants?.find((lt: any) => {
-      const lease = lt.leases;
-      return lease?.status === 'active' && lease.units?.property_id === selectedPropertyId;
-    })?.leases?.id;
-    form.setValue('lease_id', activeLeaseId ?? null);
+    const matchingLeases: any[] = (tenant?.lease_tenants ?? [])
+      .filter((lt: any) => lt.leases?.units?.property_id === selectedPropertyId)
+      .map((lt: any) => lt.leases)
+      .filter(Boolean);
+    const active = matchingLeases.find((l: any) => l.status === 'active');
+    const mostRecent = [...matchingLeases].sort((a, b) =>
+      (b.start_date ?? '').localeCompare(a.start_date ?? ''),
+    )[0];
+    const lease = active ?? mostRecent;
+    form.setValue('lease_id', lease?.id ?? null);
   }, [selectedTenantId, selectedPropertyId, tenants, form]);
 
   async function onSubmit(values: ExpenseFormValues) {
@@ -234,7 +247,12 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
                     <SelectContent>
                       <SelectItem value="none">None</SelectItem>
                       {filteredTenants.map((t: any) => (
-                        <SelectItem key={t.id} value={t.id}>{t.first_name} {t.last_name}</SelectItem>
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.first_name} {t.last_name}
+                          {!t._hasActiveLease && (
+                            <span className="ml-2 text-xs text-muted-foreground">(no active lease)</span>
+                          )}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
