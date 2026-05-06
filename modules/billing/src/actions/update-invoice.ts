@@ -42,6 +42,7 @@ export async function updateInvoice(
         unit_id: updateData.unit_id || null,
         tenant_id: updateData.tenant_id || null,
         provider_id: updateData.provider_id || null,
+        lease_id: updateData.lease_id || null,
       })
       .eq('id', id);
 

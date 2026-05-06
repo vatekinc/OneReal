@@ -46,6 +46,7 @@ export function InvoiceDialog({ open, onOpenChange, invoice, defaultDirection, m
       provider_id: invoice.provider_id ?? undefined,
       property_id: invoice.property_id,
       unit_id: invoice.unit_id ?? undefined,
+      lease_id: invoice.lease_id ?? undefined,
       description: invoice.description,
       amount: invoice.amount,
       due_date: invoice.due_date,
@@ -57,6 +58,7 @@ export function InvoiceDialog({ open, onOpenChange, invoice, defaultDirection, m
       provider_id: undefined,
       property_id: '',
       unit_id: undefined,
+      lease_id: undefined,
       description: '',
       amount: undefined as unknown as number,
       due_date: '',
@@ -73,6 +75,7 @@ export function InvoiceDialog({ open, onOpenChange, invoice, defaultDirection, m
         provider_id: invoice.provider_id ?? undefined,
         property_id: invoice.property_id,
         unit_id: invoice.unit_id ?? undefined,
+        lease_id: invoice.lease_id ?? undefined,
         description: invoice.description,
         amount: invoice.amount,
         due_date: invoice.due_date,
@@ -84,6 +87,7 @@ export function InvoiceDialog({ open, onOpenChange, invoice, defaultDirection, m
         provider_id: undefined,
         property_id: '',
         unit_id: undefined,
+        lease_id: undefined,
         description: '',
         amount: undefined as unknown as number,
         due_date: '',
@@ -119,6 +123,20 @@ export function InvoiceDialog({ open, onOpenChange, invoice, defaultDirection, m
       form.setValue('tenant_id', filteredTenants[0].id);
     }
   }, [filteredTenants, direction, form]);
+
+  // Auto-derive lease_id from selected tenant + property (active lease only)
+  const selectedTenantId = form.watch('tenant_id');
+  useEffect(() => {
+    if (direction !== 'receivable' || !selectedTenantId || !selectedPropertyId) {
+      return;
+    }
+    const tenant = tenants.find((t: any) => t.id === selectedTenantId);
+    const activeLeaseId = tenant?.lease_tenants?.find((lt: any) => {
+      const lease = lt.leases;
+      return lease?.status === 'active' && lease.units?.property_id === selectedPropertyId;
+    })?.leases?.id;
+    form.setValue('lease_id', activeLeaseId ?? null);
+  }, [selectedTenantId, selectedPropertyId, direction, tenants, form]);
 
   async function onSubmit(values: InvoiceFormValues) {
     if (!activeOrg) {

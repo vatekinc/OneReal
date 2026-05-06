@@ -35,6 +35,7 @@ export async function createInvoice(
         unit_id: parsed.data.unit_id || null,
         tenant_id: parsed.data.tenant_id || null,
         provider_id: parsed.data.provider_id || null,
+        lease_id: parsed.data.lease_id || null,
         issued_date: parsed.data.issued_date || new Date().toISOString().split('T')[0],
       })
       .select('id')
