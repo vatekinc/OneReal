@@ -5,6 +5,7 @@ import { useUser } from '@onereal/auth';
 import { useLeases, useLeaseCharges } from '@onereal/contacts';
 import { LeaseDocumentUpload } from '@/components/contacts/lease-document-upload';
 import { LeaseDialog } from '@/components/contacts/lease-dialog';
+import { DepositCard } from '@/components/billing/deposit-card';
 import {
   Tabs, TabsList, TabsTrigger, TabsContent,
   Button, Badge, Card, CardContent, CardHeader, CardTitle,
@@ -92,7 +93,7 @@ export default function LeaseDetailPage({ params }: { params: Promise<{ id: stri
           <TabsTrigger value="charges">Charges</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="details" className="mt-4">
+        <TabsContent value="details" className="mt-4 space-y-4">
           <Card>
             <CardContent className="pt-6">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -135,6 +136,11 @@ export default function LeaseDetailPage({ params }: { params: Promise<{ id: stri
               </div>
             </CardContent>
           </Card>
+
+          <DepositCard
+            leaseId={lease.id}
+            leaseLabel={`${propertyName}${unitNumber ? ` — ${unitNumber}` : ''}`}
+          />
         </TabsContent>
 
         <TabsContent value="documents" className="mt-4">
