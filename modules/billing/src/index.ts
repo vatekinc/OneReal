@@ -16,3 +16,16 @@ export { useInvoiceGenerationPreview } from './hooks/use-invoice-generation-prev
 
 export { creditSchema, applyCreditSchema, type CreditFormValues, type ApplyCreditFormValues } from './schemas/credit-schema';
 export { useCredits, useTenantCreditBalance, useCreditApplications, type CreditFilters } from './hooks/use-credits';
+
+export {
+  depositRefundSchema,
+  voidDepositRefundSchema,
+  type DepositRefundFormValues,
+} from './schemas/deposit-refund-schema';
+export {
+  useDepositRefunds,
+  useDepositSummary,
+  useEligibleDeductions,
+  type DepositRefundFilters,
+  type EligibleExpense,
+} from './hooks/use-deposit-refunds';
