@@ -54,6 +54,7 @@ export function PaymentDialog({ open, onOpenChange, invoice }: PaymentDialogProp
       queryClient.invalidateQueries({ queryKey: ['financial-stats'] });
       queryClient.invalidateQueries({ queryKey: ['credits'] });
       queryClient.invalidateQueries({ queryKey: ['credit-balance'] });
+      onOpenChange(false);
     } else {
       toast.error(result.error);
     }
