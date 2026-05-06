@@ -9,6 +9,7 @@ import { inviteTenant } from '@onereal/tenant-portal/actions/invite-tenant';
 import { TenantDialog } from '@/components/contacts/tenant-dialog';
 import { TenantCreditWidget } from '@/components/contacts/tenant-credit-widget';
 import { LeaseDialog } from '@/components/contacts/lease-dialog';
+import { DepositCard } from '@/components/billing/deposit-card';
 import {
   Button, Card, CardContent, CardHeader, CardTitle, Badge,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -210,7 +211,12 @@ export default function TenantDetailPage() {
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
+                      <div className="flex justify-end items-center gap-1">
+                        <DepositCard
+                          leaseId={lease.id}
+                          leaseLabel={`${lease.units?.properties?.name ?? 'Property'}${lease.units?.unit_number ? ` — ${lease.units.unit_number}` : ''}`}
+                          compact
+                        />
                         <Link href={`/contacts/leases/${lease.id}`}>
                           <Button variant="ghost" size="icon">
                             <ExternalLink className="h-4 w-4" />
