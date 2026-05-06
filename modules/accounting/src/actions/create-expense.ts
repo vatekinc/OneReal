@@ -26,6 +26,8 @@ export async function createExpense(
         ...parsed.data,
         org_id: orgId,
         unit_id: parsed.data.unit_id || null,
+        tenant_id: parsed.data.tenant_id || null,
+        lease_id: parsed.data.lease_id || null,
       })
       .select('id')
       .single();

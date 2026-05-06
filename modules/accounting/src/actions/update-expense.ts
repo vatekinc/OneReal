@@ -20,11 +20,26 @@ export async function updateExpense(
 
     const db = supabase as any;
 
+    const { count: linkedCount } = await db
+      .from('deposit_refund_deductions')
+      .select('id, deposit_refunds!inner(status)', { count: 'exact', head: true })
+      .eq('expense_id', expenseId)
+      .eq('deposit_refunds.status', 'active');
+
+    if (linkedCount && linkedCount > 0) {
+      return {
+        success: false,
+        error: 'This expense is linked to an active deposit refund — void the refund first to edit.',
+      };
+    }
+
     const { error } = await db
       .from('expenses')
       .update({
         ...parsed.data,
         unit_id: parsed.data.unit_id || null,
+        tenant_id: parsed.data.tenant_id || null,
+        lease_id: parsed.data.lease_id || null,
       })
       .eq('id', expenseId);
 
