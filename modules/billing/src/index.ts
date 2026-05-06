@@ -3,7 +3,7 @@ export { invoiceSchema, type InvoiceFormValues } from './schemas/invoice-schema'
 export { paymentSchema, type PaymentFormValues } from './schemas/payment-schema';
 
 // Hooks (client-only)
-export { useInvoices, type InvoiceFilters } from './hooks/use-invoices';
+export { useInvoices, useInvoice, type InvoiceFilters } from './hooks/use-invoices';
 export { usePayments } from './hooks/use-payments';
 export { useInvoiceGenerationPreview } from './hooks/use-invoice-generation-preview';
 

@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { paymentSchema, type PaymentFormValues, usePayments } from '@onereal/billing';
+import { paymentSchema, type PaymentFormValues, usePayments, useInvoice } from '@onereal/billing';
 import { recordPayment } from '@onereal/billing/actions/record-payment';
 import { voidPayment } from '@onereal/billing/actions/void-payment';
 import { useUser } from '@onereal/auth';
@@ -11,7 +11,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
   Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-  Textarea, Button, Badge,
+  Textarea, Button,
 } from '@onereal/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -36,10 +36,16 @@ export function PaymentDialog({ open, onOpenChange, invoice }: PaymentDialogProp
   const queryClient = useQueryClient();
   const { activeOrg } = useUser();
 
-  const remaining = invoice ? Number(invoice.amount) - Number(invoice.amount_paid) : 0;
+  // Prefer live invoice state so the dialog reflects voids/edits without
+  // needing to be reopened. Fall back to the prop on initial render.
+  const { data: liveInvoice } = useInvoice(invoice?.id ?? null);
+  const inv = (liveInvoice as Invoice | null | undefined) ?? invoice;
+  const remaining = inv ? Number(inv.amount) - Number(inv.amount_paid) : 0;
 
   const { data: paymentsRaw } = usePayments(invoice?.id ?? null);
-  const payments = (paymentsRaw ?? []) as any[];
+  // Only show active payments — voids stay in the DB for audit but
+  // shouldn't clutter the history view.
+  const payments = ((paymentsRaw ?? []) as any[]).filter((p) => p.status !== 'void');
 
   async function handleVoidPayment(paymentId: string, paymentAmount: number) {
     if (!activeOrg) return;
@@ -54,7 +60,7 @@ export function PaymentDialog({ open, onOpenChange, invoice }: PaymentDialogProp
       queryClient.invalidateQueries({ queryKey: ['financial-stats'] });
       queryClient.invalidateQueries({ queryKey: ['credits'] });
       queryClient.invalidateQueries({ queryKey: ['credit-balance'] });
-      onOpenChange(false);
+      // Dialog stays open — useInvoice refetches and the form picks up the new remaining
     } else {
       toast.error(result.error);
     }
@@ -138,13 +144,10 @@ export function PaymentDialog({ open, onOpenChange, invoice }: PaymentDialogProp
                     {p.reference_number && (
                       <span className="text-xs text-muted-foreground truncate">#{p.reference_number}</span>
                     )}
-                    {p.status === 'void' && <Badge variant="secondary">void</Badge>}
                   </div>
-                  {p.status === 'active' && (
-                    <Button variant="ghost" size="sm" onClick={() => handleVoidPayment(p.id, p.amount)}>
-                      Void
-                    </Button>
-                  )}
+                  <Button variant="ghost" size="sm" onClick={() => handleVoidPayment(p.id, p.amount)}>
+                    Void
+                  </Button>
                 </li>
               ))}
             </ul>

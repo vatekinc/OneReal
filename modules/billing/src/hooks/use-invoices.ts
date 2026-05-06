@@ -74,3 +74,25 @@ export function useInvoices(filters: InvoiceFilters) {
     enabled: !!filters.orgId,
   });
 }
+
+/**
+ * Live single-invoice fetch — keyed by id so React Query invalidations
+ * of ['invoices'] also refetch this entry. Use when a component needs
+ * the latest amount_paid / status (e.g. payment dialog reflecting voids).
+ */
+export function useInvoice(invoiceId: string | null) {
+  return useQuery({
+    queryKey: ['invoices', invoiceId],
+    queryFn: async () => {
+      const supabase = createClient();
+      const { data, error } = await (supabase as any)
+        .from('invoices')
+        .select('*, tenants(first_name, last_name), service_providers(name, company_name), properties(name), units(unit_number)')
+        .eq('id', invoiceId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!invoiceId,
+  });
+}
