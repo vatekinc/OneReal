@@ -8,7 +8,7 @@ import { createExpense } from '@onereal/accounting/actions/create-expense';
 import { updateExpense } from '@onereal/accounting/actions/update-expense';
 import { useUser } from '@onereal/auth';
 import { useProperties } from '@onereal/portfolio';
-import { useProviders } from '@onereal/contacts';
+import { useProviders, useTenants } from '@onereal/contacts';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
@@ -47,12 +47,16 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
   const properties = (propertiesData?.data ?? []) as any[];
   const { data: providersData } = useProviders({ orgId: activeOrg?.id ?? null });
   const providers = (providersData ?? []) as any[];
+  const { data: tenantsData } = useTenants({ orgId: activeOrg?.id ?? null });
+  const tenants = (tenantsData ?? []) as any[];
 
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseSchema),
     defaultValues: expense ? {
       property_id: expense.property_id,
       unit_id: expense.unit_id ?? undefined,
+      tenant_id: (expense as any).tenant_id ?? undefined,
+      lease_id: (expense as any).lease_id ?? undefined,
       amount: expense.amount,
       expense_type: expense.expense_type as ExpenseFormValues['expense_type'],
       description: expense.description,
@@ -61,6 +65,8 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
     } : {
       property_id: '',
       unit_id: undefined,
+      tenant_id: undefined,
+      lease_id: undefined,
       amount: undefined as unknown as number,
       expense_type: 'mortgage',
       description: '',
@@ -74,6 +80,8 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
       form.reset(expense ? {
         property_id: expense.property_id,
         unit_id: expense.unit_id ?? undefined,
+        tenant_id: (expense as any).tenant_id ?? undefined,
+        lease_id: (expense as any).lease_id ?? undefined,
         amount: expense.amount,
         expense_type: expense.expense_type as ExpenseFormValues['expense_type'],
         description: expense.description,
@@ -82,6 +90,8 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
       } : {
         property_id: '',
         unit_id: undefined,
+        tenant_id: undefined,
+        lease_id: undefined,
         amount: undefined as unknown as number,
         expense_type: 'mortgage',
         description: '',
@@ -97,6 +107,24 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
     [properties, selectedPropertyId],
   );
   const units = (selectedProperty as any)?.units ?? [];
+
+  const filteredTenants = useMemo(() => {
+    if (!selectedPropertyId) return tenants;
+    return tenants.filter((t: any) =>
+      t.lease_tenants?.some((lt: any) => lt.leases?.units?.property_id === selectedPropertyId),
+    );
+  }, [tenants, selectedPropertyId]);
+
+  const selectedTenantId = form.watch('tenant_id');
+  useEffect(() => {
+    if (!selectedTenantId || !selectedPropertyId) return;
+    const tenant = tenants.find((t: any) => t.id === selectedTenantId);
+    const activeLeaseId = tenant?.lease_tenants?.find((lt: any) => {
+      const lease = lt.leases;
+      return lease?.status === 'active' && lease.units?.property_id === selectedPropertyId;
+    })?.leases?.id;
+    form.setValue('lease_id', activeLeaseId ?? null);
+  }, [selectedTenantId, selectedPropertyId, tenants, form]);
 
   async function onSubmit(values: ExpenseFormValues) {
     if (!activeOrg) {
@@ -192,6 +220,21 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
                       <SelectItem value="none">None</SelectItem>
                       {providers.map((p: any) => (
                         <SelectItem key={p.id} value={p.id}>{p.name}{p.company_name ? ` (${p.company_name})` : ''}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="tenant_id" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tenant (optional)</FormLabel>
+                  <Select onValueChange={(v) => field.onChange(v === 'none' ? null : v)} value={field.value ?? 'none'}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="None" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {filteredTenants.map((t: any) => (
+                        <SelectItem key={t.id} value={t.id}>{t.first_name} {t.last_name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
