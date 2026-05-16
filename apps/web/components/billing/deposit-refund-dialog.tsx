@@ -9,6 +9,7 @@ import {
   type DepositRefundFormValues,
   useDepositSummary,
   useEligibleDeductions,
+  useEligibleInvoiceSettlements,
 } from '@onereal/billing';
 import { createDepositRefund } from '@onereal/billing/actions/create-deposit-refund';
 import {
@@ -33,6 +34,10 @@ export function DepositRefundDialog({ open, onOpenChange, leaseId, leaseLabel }:
 
   const { data: summary } = useDepositSummary(activeOrg?.id ?? null, leaseId);
   const { data: eligible = [] } = useEligibleDeductions(activeOrg?.id ?? null, leaseId, includeWindow);
+  const { data: eligibleInvoices = [] } = useEligibleInvoiceSettlements(
+    activeOrg?.id ?? null,
+    leaseId,
+  );
 
   const form = useForm<DepositRefundFormValues>({
     resolver: zodResolver(depositRefundSchema),
@@ -44,6 +49,7 @@ export function DepositRefundDialog({ open, onOpenChange, leaseId, leaseLabel }:
       reference_number: '',
       notes: '',
       deduction_expense_ids: [],
+      settle_invoice_ids: [],
     },
   });
 
@@ -57,6 +63,7 @@ export function DepositRefundDialog({ open, onOpenChange, leaseId, leaseLabel }:
         reference_number: '',
         notes: '',
         deduction_expense_ids: [],
+        settle_invoice_ids: [],
       });
       setIncludeWindow(false);
     }
@@ -64,6 +71,7 @@ export function DepositRefundDialog({ open, onOpenChange, leaseId, leaseLabel }:
 
   const selectedIds = form.watch('deduction_expense_ids');
   const refundAmount = form.watch('refund_amount');
+  const selectedInvoiceIds = form.watch('settle_invoice_ids');
 
   const withheld = useMemo(
     () =>
@@ -73,11 +81,19 @@ export function DepositRefundDialog({ open, onOpenChange, leaseId, leaseLabel }:
     [eligible, selectedIds],
   );
 
+  const invoiceWithheld = useMemo(
+    () =>
+      (eligibleInvoices as any[])
+        .filter((i: any) => selectedInvoiceIds.includes(i.id))
+        .reduce((sum: number, i: any) => sum + Number(i.outstanding), 0),
+    [eligibleInvoices, selectedInvoiceIds],
+  );
+
   const held = Number(summary?.held ?? 0);
   const refunded = Number(summary?.refunded ?? 0);
   const previouslyWithheld = Number(summary?.withheld ?? 0);
-  const available = Math.max(0, held - refunded - previouslyWithheld - withheld);
-  const maxRefundable = held - refunded - previouslyWithheld - withheld;
+  const available = Math.max(0, held - refunded - previouslyWithheld - withheld - invoiceWithheld);
+  const maxRefundable = held - refunded - previouslyWithheld - withheld - invoiceWithheld;
 
   function toggleDeduction(expenseId: string) {
     const cur = form.getValues('deduction_expense_ids');
@@ -85,6 +101,14 @@ export function DepositRefundDialog({ open, onOpenChange, leaseId, leaseLabel }:
       ? cur.filter((id) => id !== expenseId)
       : [...cur, expenseId];
     form.setValue('deduction_expense_ids', next);
+  }
+
+  function toggleInvoice(invoiceId: string) {
+    const cur = form.getValues('settle_invoice_ids');
+    const next = cur.includes(invoiceId)
+      ? cur.filter((id) => id !== invoiceId)
+      : [...cur, invoiceId];
+    form.setValue('settle_invoice_ids', next);
   }
 
   async function onSubmit(values: DepositRefundFormValues) {
@@ -105,6 +129,9 @@ export function DepositRefundDialog({ open, onOpenChange, leaseId, leaseLabel }:
       queryClient.invalidateQueries({ queryKey: ['deposit-eligible-deductions'] });
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['financial-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['deposit-eligible-invoices'] });
       onOpenChange(false);
     } else {
       toast.error(result.error);
@@ -130,7 +157,7 @@ export function DepositRefundDialog({ open, onOpenChange, leaseId, leaseLabel }:
           </div>
           <div>
             <div className="text-xs text-muted-foreground">Withheld (selected)</div>
-            <div className="font-medium">${withheld.toFixed(2)}</div>
+            <div className="font-medium">${(withheld + invoiceWithheld).toFixed(2)}</div>
           </div>
           <div>
             <div className="text-xs text-muted-foreground">Available</div>
@@ -178,6 +205,44 @@ export function DepositRefundDialog({ open, onOpenChange, leaseId, leaseLabel }:
                       </label>
                     );
                   })}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-md border p-3">
+              <div className="mb-2">
+                <span className="text-sm font-medium">
+                  Invoice settlements (apply deposit to unpaid tenant charges)
+                </span>
+              </div>
+              {(eligibleInvoices as any[]).length === 0 ? (
+                <p className="text-xs text-muted-foreground py-2">
+                  No unpaid receivable invoices for this lease.
+                </p>
+              ) : (
+                <div className="max-h-40 overflow-y-auto space-y-1">
+                  {(eligibleInvoices as any[]).map((i: any) => {
+                    const checked = selectedInvoiceIds.includes(i.id);
+                    return (
+                      <label
+                        key={i.id}
+                        className="flex items-center gap-3 px-2 py-1 rounded hover:bg-muted/40 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleInvoice(i.id)}
+                          className="h-4 w-4 accent-primary"
+                        />
+                        <span className="text-xs text-muted-foreground w-28">{i.invoice_number}</span>
+                        <span className="text-sm flex-1 truncate">{i.description}</span>
+                        <span className="text-sm font-medium">${Number(i.outstanding).toFixed(2)}</span>
+                      </label>
+                    );
+                  })}
+                  <div className="text-xs text-muted-foreground pt-1">
+                    Settling: ${invoiceWithheld.toFixed(2)}
+                  </div>
                 </div>
               )}
             </div>
