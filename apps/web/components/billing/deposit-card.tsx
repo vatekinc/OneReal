@@ -49,6 +49,9 @@ export function DepositCard({ leaseId, leaseLabel, compact }: DepositCardProps) 
       queryClient.invalidateQueries({ queryKey: ['deposit-eligible-deductions'] });
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['financial-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['deposit-eligible-invoices'] });
     } else {
       toast.error(result.error);
     }
