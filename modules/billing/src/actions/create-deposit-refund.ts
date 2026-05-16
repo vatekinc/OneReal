@@ -15,6 +15,7 @@ export async function createDepositRefund(
   expense_id: string;
   refund_number: string;
   balance_remaining: number;
+  invoice_settlements_total: number;
 }>> {
   try {
     const parsed = depositRefundSchema.safeParse(values);
@@ -37,6 +38,7 @@ export async function createDepositRefund(
       p_reference_number: parsed.data.reference_number ?? null,
       p_notes: parsed.data.notes ?? null,
       p_deduction_expense_ids: parsed.data.deduction_expense_ids,
+      p_settle_invoice_ids: parsed.data.settle_invoice_ids,
     });
 
     if (error) return { success: false, error: error.message };

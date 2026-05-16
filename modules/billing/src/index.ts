@@ -26,6 +26,8 @@ export {
   useDepositRefunds,
   useDepositSummary,
   useEligibleDeductions,
+  useEligibleInvoiceSettlements,
   type DepositRefundFilters,
   type EligibleExpense,
+  type EligibleInvoiceSettlement,
 } from './hooks/use-deposit-refunds';
