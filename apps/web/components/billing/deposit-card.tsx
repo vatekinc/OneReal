@@ -49,6 +49,9 @@ export function DepositCard({ leaseId, leaseLabel, compact }: DepositCardProps) 
       queryClient.invalidateQueries({ queryKey: ['deposit-eligible-deductions'] });
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['financial-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['deposit-eligible-invoices'] });
     } else {
       toast.error(result.error);
     }
@@ -153,6 +156,19 @@ export function DepositCard({ leaseId, leaseLabel, compact }: DepositCardProps) 
                         (d: any) =>
                           `${d.expense?.description || d.expense?.expense_type} $${Number(
                             d.expense?.amount || 0,
+                          ).toFixed(2)}`,
+                      )
+                      .join(', ')}
+                  </div>
+                )}
+                {r.settlements?.length > 0 && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Settled invoices:{' '}
+                    {r.settlements
+                      .map(
+                        (s: any) =>
+                          `${s.invoice?.invoice_number ?? ''} ${s.invoice?.description ?? ''} $${Number(
+                            s.amount || 0,
                           ).toFixed(2)}`,
                       )
                       .join(', ')}

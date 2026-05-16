@@ -24,6 +24,10 @@ export function useDepositRefunds(filters: DepositRefundFilters) {
           expense:expenses!deposit_refunds_expense_id_fkey(id, amount, transaction_date),
           deductions:deposit_refund_deductions(
             expense:expenses(id, amount, description, transaction_date, expense_type)
+          ),
+          settlements:deposit_refund_invoice_settlements(
+            amount,
+            invoice:invoices(invoice_number, description)
           )
         `)
         .eq('org_id', filters.orgId)
@@ -125,6 +129,68 @@ export function useEligibleDeductions(
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []).filter((e: any) => !linkedIds.has(e.id)) as EligibleExpense[];
+    },
+    enabled: !!orgId && !!leaseId,
+  });
+}
+
+export interface EligibleInvoiceSettlement {
+  id: string;
+  invoice_number: string;
+  description: string;
+  amount: number;
+  amount_paid: number;
+  outstanding: number;
+  due_date: string;
+}
+
+/**
+ * Lists receivable invoices eligible to be settled from the deposit:
+ * - direction='receivable', status in ('open','partially_paid')
+ * - lease_id = leaseId
+ * - excludes invoices already settled by an active refund
+ * The RPC re-validates under lock; this picker is best-effort.
+ */
+export function useEligibleInvoiceSettlements(
+  orgId: string | null,
+  leaseId: string | null,
+) {
+  return useQuery({
+    queryKey: ['deposit-eligible-invoices', orgId, leaseId],
+    queryFn: async () => {
+      if (!orgId || !leaseId) return [] as EligibleInvoiceSettlement[];
+      const supabase = createClient();
+      const db = supabase as any;
+
+      const { data: linkedRows } = await db
+        .from('deposit_refund_invoice_settlements')
+        .select('invoice_id, deposit_refunds!inner(status, org_id)')
+        .eq('deposit_refunds.status', 'active')
+        .eq('deposit_refunds.org_id', orgId);
+      const linkedIds = new Set((linkedRows ?? []).map((r: any) => r.invoice_id));
+
+      const { data, error } = await db
+        .from('invoices')
+        .select('id, invoice_number, description, amount, amount_paid, due_date, status, direction, lease_id')
+        .eq('org_id', orgId)
+        .eq('direction', 'receivable')
+        .eq('lease_id', leaseId)
+        .in('status', ['open', 'partially_paid'])
+        .order('due_date', { ascending: true });
+
+      if (error) throw error;
+      return (data ?? [])
+        .filter((i: any) => !linkedIds.has(i.id))
+        .map((i: any) => ({
+          id: i.id,
+          invoice_number: i.invoice_number,
+          description: i.description,
+          amount: Number(i.amount),
+          amount_paid: Number(i.amount_paid),
+          outstanding: Number(i.amount) - Number(i.amount_paid),
+          due_date: i.due_date,
+        }))
+        .filter((i: EligibleInvoiceSettlement) => i.outstanding > 0) as EligibleInvoiceSettlement[];
     },
     enabled: !!orgId && !!leaseId,
   });

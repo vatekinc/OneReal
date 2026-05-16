@@ -8,6 +8,7 @@ export const depositRefundSchema = z.object({
   reference_number: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   deduction_expense_ids: z.array(z.string().uuid()).default([]),
+  settle_invoice_ids: z.array(z.string().uuid()).default([]),
 });
 
 export type DepositRefundFormValues = z.infer<typeof depositRefundSchema>;
