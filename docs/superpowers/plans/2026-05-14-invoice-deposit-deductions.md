@@ -164,7 +164,18 @@ $$;
 
 -- ------------------------------------------------------------
 -- 5. RPC: create_deposit_refund (replace — add p_settle_invoice_ids)
+--
+-- NOTE: the signature changes (8 -> 9 args). In Postgres,
+-- CREATE OR REPLACE with a different argument list creates a
+-- SEPARATE overload rather than replacing, leaving the old
+-- 8-arg function in place. Drop the old signature explicitly
+-- so only the 9-arg version remains. (DECIMAL(10,2) normalizes
+-- to `numeric` in a DROP FUNCTION signature.)
 -- ------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.create_deposit_refund(
+  uuid, uuid, numeric, date, text, text, text, uuid[]
+);
+
 CREATE OR REPLACE FUNCTION public.create_deposit_refund(
   p_org_id                UUID,
   p_lease_id              UUID,
