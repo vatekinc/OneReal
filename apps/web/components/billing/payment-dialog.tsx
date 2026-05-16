@@ -145,9 +145,15 @@ export function PaymentDialog({ open, onOpenChange, invoice }: PaymentDialogProp
                       <span className="text-xs text-muted-foreground truncate">#{p.reference_number}</span>
                     )}
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => handleVoidPayment(p.id, p.amount)}>
-                    Void
-                  </Button>
+                  {p.payment_method === 'deposit' ? (
+                    <span className="text-xs text-muted-foreground">
+                      Settled from deposit refund — void the refund to reverse
+                    </span>
+                  ) : (
+                    <Button variant="ghost" size="sm" onClick={() => handleVoidPayment(p.id, p.amount)}>
+                      Void
+                    </Button>
+                  )}
                 </li>
               ))}
             </ul>

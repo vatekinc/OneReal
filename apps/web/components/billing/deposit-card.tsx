@@ -158,6 +158,19 @@ export function DepositCard({ leaseId, leaseLabel, compact }: DepositCardProps) 
                       .join(', ')}
                   </div>
                 )}
+                {r.settlements?.length > 0 && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Settled invoices:{' '}
+                    {r.settlements
+                      .map(
+                        (s: any) =>
+                          `${s.invoice?.invoice_number ?? ''} ${s.invoice?.description ?? ''} $${Number(
+                            s.amount || 0,
+                          ).toFixed(2)}`,
+                      )
+                      .join(', ')}
+                  </div>
+                )}
               </li>
             ))}
           </ul>
