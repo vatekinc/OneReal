@@ -38,6 +38,7 @@ Modeling a tenant charge as a receivable invoice is the correct instrument for "
 - **Payable invoices** — vendor bills are conceptually expenses, already covered by the expense-deduction path. Out of scope here.
 - **Tenant-level / property-window invoice candidates** — eligibility is restricted to receivable invoices whose `lease_id` is exactly this lease (mirrors the default expense filter). The expense path's "show property window" toggle is not mirrored for invoices in v1.
 - **Auto-collection of the deposit itself** — see Assumptions; entering `lease.deposit_amount` does not create an invoice/income, and this spec does not change that.
+- **Zero-cash refunds** — a deposit refund always cuts a **non-zero** cash `p_refund_amount`. Settling an invoice from the deposit is *in addition to* a cash refund, never *instead of* it. This is enforced by pre-existing constraints (`deposit_refunds.refund_amount > 0`, the paired `expenses.amount > 0`, the zod `.positive()` validator, and the dialog's submit guards) and is **unchanged** by this feature — no code touches it. "Keep the entire deposit, return $0" / settle-only refunds are out of scope for v1.
 
 ---
 
@@ -63,7 +64,7 @@ The paired `deposit_refund` **expense** row created for the cash refund (`p_refu
 `payments.payment_method` CHECK is currently `('cash','check','bank_transfer','online','other')` ([20260315000008_billing_tables.sql:93](../../../supabase/migrations/20260315000008_billing_tables.sql#L93)) — no value represents "paid from the held deposit." Add `'deposit'`, mirroring how `expenses.expense_type` was extended with `'deposit_refund'`:
 
 ```sql
-ALTER TABLE public.payments DROP CONSTRAINT payments_payment_method_check;
+ALTER TABLE public.payments DROP CONSTRAINT IF EXISTS payments_payment_method_check;
 ALTER TABLE public.payments ADD CONSTRAINT payments_payment_method_check
   CHECK (payment_method IN ('cash','check','bank_transfer','online','other','deposit'));
 ```
@@ -289,7 +290,7 @@ SQL/pgTAP-style checks for the RPC (or scripted via the Supabase SQL editor, mat
 6. **Mixed + corrected guard regression** — one expense deduction + one invoice settlement on one refund → both in `withheld`, math ties out. Plus an explicit regression for the behavior change: two refunds on one lease where refund #1 has an expense deduction; refund #2's guard must count refund #1's deduction (previously it did not) and reject an over-draw — guard result must equal `get_lease_deposit_summary.balance`.
 7. **Void with intervening payment** — partially pay an invoice with cash, settle the remainder from deposit, void → status recomputes to `partially_paid`, not `open`; only the deposit-sourced payment/income deleted, the cash payment untouched.
 8. **void_payment guard** — attempt `void_payment` on a deposit-sourced payment → rejected with the Req 8a message; the invoice/settlement remain intact.
-9. **Phased refunds** — refund #1 settles invoice A (zero cash refund); refund #2 attempts a cash refund that, combined with #1's settlement, exceeds the deposit → rejected by the spanning guard.
+9. **Phased refunds** — refund #1 settles invoice A plus a small non-zero cash refund; refund #2 attempts a cash refund that, combined with #1's settlement, exceeds the deposit → rejected by the spanning guard. (Every refund carries a non-zero cash amount per the v1 non-goal.)
 10. **UI walkthrough** — the exact Destiny scenario end-to-end; the empty-state message when a lease has no receivable invoices; and the payment-dialog hiding void for a deposit-sourced payment.
 
 ---
