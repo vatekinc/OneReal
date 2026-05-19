@@ -208,12 +208,22 @@ export function LeaseDialog({ open, onOpenChange, lease, defaultTenantId, defaul
       : await createLease(activeOrg.id, values);
 
     if (result.success) {
-      // Create pending charges for new leases
+      // Fold any in-progress inline charge row into the list so a user
+      // who clicks Update (instead of the "+" button) doesn't silently
+      // lose the charge they just typed.
+      const inlineAmount = parseFloat(newChargeAmount);
+      const chargesToCreate: PendingCharge[] = [
+        ...pendingCharges,
+        ...(newChargeName.trim() && !isNaN(inlineAmount) && inlineAmount > 0
+          ? [{ name: newChargeName.trim(), amount: inlineAmount, frequency: newChargeFrequency }]
+          : []),
+      ];
+
       const leaseId = lease?.id ?? (result as any).data?.id;
-      if (leaseId && pendingCharges.length > 0) {
+      if (leaseId && chargesToCreate.length > 0) {
         const startDate = values.start_date;
-        for (const charge of pendingCharges) {
-          await createLeaseCharge(activeOrg.id, leaseId, {
+        for (const charge of chargesToCreate) {
+          const chargeResult = await createLeaseCharge(activeOrg.id, leaseId, {
             name: charge.name,
             amount: charge.amount,
             frequency: charge.frequency,
@@ -221,6 +231,9 @@ export function LeaseDialog({ open, onOpenChange, lease, defaultTenantId, defaul
             end_date: '',
             is_active: true,
           });
+          if (!chargeResult.success) {
+            toast.error(`Charge "${charge.name}" not saved: ${chargeResult.error}`);
+          }
         }
       }
 
