@@ -60,6 +60,18 @@ export async function createLease(
         .eq('id', parsed.data.unit_id);
     }
 
+    if (parsed.data.status === 'active' && Number(parsed.data.deposit_amount) > 0) {
+      try {
+        await db.rpc('create_lease_deposit_invoice', {
+          p_org_id: orgId,
+          p_lease_id: data.id,
+          p_mark_paid: false,
+        });
+      } catch {
+        // non-fatal: deposit invoice can be (re)generated later; lease creation must still succeed
+      }
+    }
+
     return { success: true, data: { id: data.id } };
   } catch {
     return { success: false, error: 'Failed to create lease' };

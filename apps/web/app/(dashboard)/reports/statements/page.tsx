@@ -95,10 +95,11 @@ export default function StatementsPage() {
   // ── CSV exports ──
   function exportTenantStatement() {
     if (!tenantStatementData) return;
-    const headers = ['Date', 'Type', 'Description', 'Reference', 'Charges', 'Payments/Credits', 'Balance'];
+    const headers = ['Date', 'Type', 'Description', 'Reference', 'Charges', 'Payments/Credits', 'Balance', 'Deposit In', 'Deposit Out', 'Deposit Held'];
     const rows = tenantStatementData.map((r) => [
       r.txn_date, r.txn_type, r.description, r.reference,
       r.charge_amount.toFixed(2), r.payment_amount.toFixed(2), r.running_balance.toFixed(2),
+      r.deposit_in.toFixed(2), r.deposit_out.toFixed(2), r.deposit_running.toFixed(2),
     ]);
     downloadCsv('tenant-statement.csv', headers, rows);
   }

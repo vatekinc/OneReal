@@ -472,12 +472,17 @@ export interface CollectionRatePoint {
 export interface TenantStatementRow {
   txn_date: string;
   sort_key: number;
-  txn_type: 'charge' | 'late_fee' | 'payment' | 'credit' | 'credit_applied';
+  txn_type:
+    | 'charge' | 'late_fee' | 'payment' | 'credit' | 'credit_applied'
+    | 'deposit_charge' | 'deposit_payment' | 'deposit_refund' | 'deposit_settlement';
   description: string;
   reference: string;
   charge_amount: number;
   payment_amount: number;
   running_balance: number;
+  deposit_in: number;
+  deposit_out: number;
+  deposit_running: number;
 }
 
 export interface PropertyStatementRow {

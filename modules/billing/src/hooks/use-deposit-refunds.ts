@@ -175,6 +175,7 @@ export function useEligibleInvoiceSettlements(
         .eq('org_id', orgId)
         .eq('direction', 'receivable')
         .eq('lease_id', leaseId)
+        .eq('is_deposit', false)
         .in('status', ['open', 'partially_paid'])
         .order('due_date', { ascending: true });
 
