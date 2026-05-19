@@ -146,7 +146,18 @@ $$;
 --      non-deposit rows; deposit_running ONLY over deposit rows
 --    - the pre-existing rent Payments union's missing
 --      p.status<>'void' filter is intentionally NOT changed
+--
+--    NOTE: the RETURNS TABLE gains 3 columns (deposit_in/out/
+--    running). Postgres CREATE OR REPLACE CANNOT change a
+--    function's return type (SQLSTATE 42P13), so the old
+--    8-column signature must be dropped first. No DB object
+--    depends on this RPC (it is called only by the app via
+--    PostgREST), so a plain DROP (no CASCADE) is safe; the
+--    DROP+CREATE run in the same migration transaction so
+--    there is no client-visible gap.
 -- ------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.get_tenant_statement(uuid, uuid, uuid, date, date);
+
 CREATE OR REPLACE FUNCTION public.get_tenant_statement(
   p_org_id UUID,
   p_tenant_id UUID,
