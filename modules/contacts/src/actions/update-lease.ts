@@ -23,7 +23,7 @@ export async function updateLease(
     // Fetch current lease to check status transitions
     const { data: currentLease } = await db
       .from('leases')
-      .select('status')
+      .select('status, org_id')
       .eq('id', id)
       .single();
 
@@ -93,6 +93,23 @@ export async function updateLease(
           .from('units')
           .update({ status: 'vacant' })
           .eq('id', parsed.data.unit_id);
+      }
+    }
+
+    if (
+      parsed.data.status === 'active' &&
+      currentLease?.status !== 'active' &&
+      currentLease?.org_id &&
+      Number(parsed.data.deposit_amount) > 0
+    ) {
+      try {
+        await db.rpc('create_lease_deposit_invoice', {
+          p_org_id: currentLease.org_id,
+          p_lease_id: id,
+          p_mark_paid: false,
+        });
+      } catch {
+        // non-fatal; RPC is idempotent so a later activation is safe
       }
     }
 

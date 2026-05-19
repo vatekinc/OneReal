@@ -38,6 +38,9 @@ export async function getTenantStatement(
     charge_amount: Number(row.charge_amount) || 0,
     payment_amount: Number(row.payment_amount) || 0,
     running_balance: Number(row.running_balance) || 0,
+    deposit_in: Number(row.deposit_in) || 0,
+    deposit_out: Number(row.deposit_out) || 0,
+    deposit_running: Number(row.deposit_running) || 0,
   }));
 }
 
