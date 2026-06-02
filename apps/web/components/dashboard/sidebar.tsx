@@ -8,7 +8,7 @@ import { cn, Button, Sheet, SheetContent, SheetTrigger, Tooltip, TooltipContent,
 import {
   LayoutDashboard, Building2, Calculator, Users, Wrench,
   Settings, ChevronLeft, ChevronRight, ChevronDown, Menu,
-  Home, FileText, CreditCard, MessageSquare, BarChart3,
+  Home, FileText, CreditCard, MessageSquare, BarChart3, BookOpen,
 } from 'lucide-react';
 import { useRole } from '@onereal/auth';
 import { useUnreadCount } from '@onereal/messaging';
@@ -67,6 +67,7 @@ const tenantNavItems: NavItem[] = [
 ];
 
 const bottomItems: NavItem[] = [
+  { label: 'Guide', href: '/guide', icon: BookOpen },
   { label: 'Settings', href: '/settings', icon: Settings },
 ];
 
