@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button, Input, Label, Separator } from '@onereal/ui';
+import { BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function LoginPage() {
@@ -86,6 +87,24 @@ export default function LoginPage() {
         Don&apos;t have an account?{' '}
         <Link href="/register" className="font-semibold text-blue-600 hover:underline">Sign up</Link>
       </p>
+
+      {/* Mobile-only explainer — the brand panel with this content is hidden on small screens */}
+      <div className="mt-8 border-t pt-6 md:hidden">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          How OneReal works
+        </h3>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          Add your properties, tenants, and service providers, create a lease to link a tenant
+          to a unit, then track rent, expenses, and maintenance — all in one portal.
+        </p>
+        <div className="mt-3 flex items-start gap-2.5 rounded-lg border bg-muted/40 p-3">
+          <BookOpen className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Once you sign in, open <span className="font-medium text-foreground">Guide</span> in the
+            sidebar to learn how to navigate the portal.
+          </p>
+        </div>
+      </div>
     </>
   );
 }
