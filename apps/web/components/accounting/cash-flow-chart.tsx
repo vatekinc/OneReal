@@ -38,7 +38,7 @@ export function CashFlowChart({ data }: CashFlowChartProps) {
 
   return (
     <ResponsiveContainer width="100%" height={300}>
-      <ComposedChart data={data}>
+      <ComposedChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
         <defs>
           <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#22c55e" stopOpacity={0.2} />
@@ -51,7 +51,7 @@ export function CashFlowChart({ data }: CashFlowChartProps) {
         </defs>
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
         <XAxis dataKey="month" tickFormatter={formatMonth} className="text-xs" />
-        <YAxis tickFormatter={formatCurrency} className="text-xs" />
+        <YAxis tickFormatter={formatCurrency} className="text-xs" width={72} />
         <Tooltip
           content={({ active, payload, label }) => {
             if (!active || !payload?.length) return null;
