@@ -321,7 +321,7 @@ export interface Payment {
   invoice_id: string;
   amount: number;
   payment_date: string;
-  payment_method: 'cash' | 'check' | 'bank_transfer' | 'online' | 'other';
+  payment_method: 'cash' | 'check' | 'card' | 'bank_transfer' | 'online' | 'other' | 'deposit' | 'plaid';
   reference_number: string | null;
   notes: string | null;
   income_id: string | null;
