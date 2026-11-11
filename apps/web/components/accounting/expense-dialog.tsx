@@ -172,7 +172,7 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
               <FormField control={form.control} name="property_id" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Property *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined}>
+                  <Select onValueChange={field.onChange} value={field.value ?? ''}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Select property" /></SelectTrigger></FormControl>
                     <SelectContent>
                       {properties.map((p) => (
@@ -187,7 +187,7 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
                 <FormField control={form.control} name="unit_id" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Unit</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined}>
+                    <Select onValueChange={field.onChange} value={field.value ?? ''}>
                       <FormControl><SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger></FormControl>
                       <SelectContent>
                         {units.map((u: any, idx: number) => (
@@ -213,7 +213,7 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
               <FormField control={form.control} name="expense_type" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                     <SelectContent>
                       {Object.entries(expenseTypeLabels).map(([value, label]) => (
@@ -227,7 +227,7 @@ export function ExpenseDialog({ open, onOpenChange, expense }: ExpenseDialogProp
               <FormField control={form.control} name="provider_id" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Service Provider</FormLabel>
-                  <Select onValueChange={(v) => field.onChange(v === 'none' ? null : v)} defaultValue={field.value ?? 'none'}>
+                  <Select onValueChange={(v) => field.onChange(v === 'none' ? null : v)} value={field.value ?? 'none'}>
                     <FormControl><SelectTrigger><SelectValue placeholder="None" /></SelectTrigger></FormControl>
                     <SelectContent>
                       <SelectItem value="none">None</SelectItem>
