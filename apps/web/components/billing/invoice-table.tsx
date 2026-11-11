@@ -5,7 +5,7 @@ import {
   Button,
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@onereal/ui';
-import { MoreHorizontal, Pencil, DollarSign, Ban, Trash2, CreditCard, Copy } from 'lucide-react';
+import { MoreHorizontal, Pencil, DollarSign, Ban, Trash2, CreditCard, Copy, History } from 'lucide-react';
 import type { Invoice } from '@onereal/types';
 import { formatDate } from '@/lib/format-date';
 
@@ -50,6 +50,9 @@ export function InvoiceTable({ invoices, direction, onPay, onEdit, onVoid, onDel
             const cfg = statusConfig[inv.displayStatus] || statusConfig.open;
             const isPastDue = inv.displayStatus === 'overdue';
             const canPay = inv.status !== 'paid' && inv.status !== 'void';
+            // Fully paid invoices still need a way into the payment history
+            // so a wrong payment can be voided.
+            const canViewPayments = !canPay && Number(inv.amount_paid) > 0;
             const canVoid = Number(inv.amount_paid) === 0 && inv.status !== 'void';
             const canDelete = Number(inv.amount_paid) === 0 && inv.status !== 'void';
             const canEdit = inv.status !== 'void';
@@ -82,6 +85,11 @@ export function InvoiceTable({ invoices, direction, onPay, onEdit, onVoid, onDel
                     {canPay && (
                       <Button variant="ghost" size="icon" onClick={() => onPay(inv)} title="Record Payment">
                         <DollarSign className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {canViewPayments && (
+                      <Button variant="ghost" size="icon" onClick={() => onPay(inv)} title="Payments">
+                        <History className="h-4 w-4" />
                       </Button>
                     )}
                     {inv.direction === 'receivable' && (inv.status === 'open' || inv.status === 'partially_paid') && onApplyCredit && (

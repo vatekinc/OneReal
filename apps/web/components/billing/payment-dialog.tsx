@@ -41,6 +41,9 @@ export function PaymentDialog({ open, onOpenChange, invoice }: PaymentDialogProp
   const { data: liveInvoice } = useInvoice(invoice?.id ?? null);
   const inv = (liveInvoice as Invoice | null | undefined) ?? invoice;
   const remaining = inv ? Number(inv.amount) - Number(inv.amount_paid) : 0;
+  // Paid/void invoices open in history-only mode: payments can be voided,
+  // but no new payment can be recorded.
+  const canRecord = !!inv && inv.status !== 'paid' && inv.status !== 'void';
 
   const { data: paymentsRaw } = usePayments(invoice?.id ?? null);
   // Only show active payments — voids stay in the DB for audit but
@@ -123,7 +126,7 @@ export function PaymentDialog({ open, onOpenChange, invoice }: PaymentDialogProp
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Record Payment</DialogTitle>
+          <DialogTitle>{canRecord ? 'Record Payment' : 'Payments'}</DialogTitle>
           {invoice && (
             <DialogDescription>
               {invoice.invoice_number} — Remaining: ${remaining.toFixed(2)}
@@ -160,6 +163,17 @@ export function PaymentDialog({ open, onOpenChange, invoice }: PaymentDialogProp
           </div>
         )}
 
+        {!canRecord && payments.length === 0 && (
+          <p className="text-sm text-muted-foreground">No active payments on this invoice.</p>
+        )}
+
+        {!canRecord && (
+          <div className="flex justify-end">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+          </div>
+        )}
+
+        {canRecord && (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -225,6 +239,7 @@ export function PaymentDialog({ open, onOpenChange, invoice }: PaymentDialogProp
             </div>
           </form>
         </Form>
+        )}
       </DialogContent>
     </Dialog>
   );
