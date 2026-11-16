@@ -9,3 +9,6 @@ export { useTenantMaintenanceRequests } from './hooks/use-tenant-maintenance-req
 // Server actions: use deep imports
 // import { createMaintenanceRequest } from '@onereal/maintenance/actions/create-maintenance-request';
 // import { updateMaintenanceRequest } from '@onereal/maintenance/actions/update-maintenance-request';
+export { useMaintenanceActivity, type MaintenanceActivity } from './hooks/use-maintenance-activity';
+// import { addMaintenanceNote } from '@onereal/maintenance/actions/add-maintenance-note';
+// import { deleteMaintenanceNote } from '@onereal/maintenance/actions/delete-maintenance-note';

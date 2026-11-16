@@ -18,6 +18,7 @@ import {
 } from '@onereal/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { MaintenanceActivityPanel } from './maintenance-activity';
 
 const categoryLabels: Record<string, string> = {
   plumbing: 'Plumbing',
@@ -134,6 +135,7 @@ export function MaintenanceDialog({ open, onOpenChange, request, properties }: M
     if (result.success) {
       toast.success('Maintenance request updated');
       queryClient.invalidateQueries({ queryKey: ['maintenance-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['maintenance-activity', request.id] });
       onOpenChange(false);
     } else {
       toast.error(result.error);
@@ -142,7 +144,7 @@ export function MaintenanceDialog({ open, onOpenChange, request, properties }: M
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className={isEdit ? 'max-h-[90vh] max-w-2xl overflow-y-auto' : 'max-w-lg'}>
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Update Request' : 'New Maintenance Request'}</DialogTitle>
         </DialogHeader>
@@ -154,6 +156,9 @@ export function MaintenanceDialog({ open, onOpenChange, request, properties }: M
               <div className="mb-2">
                 <p className="text-sm text-muted-foreground">Title</p>
                 <p className="font-medium">{request.title}</p>
+                {request.description && (
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{request.description}</p>
+                )}
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -229,6 +234,10 @@ export function MaintenanceDialog({ open, onOpenChange, request, properties }: M
               </div>
             </form>
           </Form>
+        ) : null}
+
+        {isEdit ? (
+          <MaintenanceActivityPanel requestId={request.id} />
         ) : (
           /* ── Create mode ── */
           <Form {...createForm}>
